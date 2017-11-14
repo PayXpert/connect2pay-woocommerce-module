@@ -5,7 +5,8 @@ The author of this plugin can NEVER be held responsible for this software.
 There is no warranty what so ever. You accept this by using this software.
 
 ## Changelog
-* 1.0.0 - Release date: November 09th, 2015
+* 1.0.1 - Get order parameters with methods
+* 1.0.0 - Released iframe branch
 
 ## Installation
 1. Install the plugin like you always install plugins, either by uploading it via FTP or by using the "Add Plugin" function of WordPress.
