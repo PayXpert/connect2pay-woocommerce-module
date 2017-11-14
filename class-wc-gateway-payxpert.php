@@ -247,45 +247,45 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
    * @return array
    */
   public function process_payment($order_id) {
-    $order = wc_get_order($order_id);
+    $order = new WC_Order($order_id);
 
     // init api
     $c2pClient = new Connect2PayClient($this->connect2_url, $this->originator_id, $this->password);
 
     // customer informations
-    $c2pClient->setShopperID($order->customer_user);
-    $c2pClient->setShopperEmail($order->billing_email);
-    $c2pClient->setShopperFirstName(substr($order->billing_first_name, 0, 35));
-    $c2pClient->setShopperLastName(substr($order->billing_last_name, 0, 35));
-    $c2pClient->setShopperCompany(substr($order->billing_company, 0, 128));
-    $c2pClient->setShopperAddress(substr(trim($order->billing_address_1 . ' ' . $order->billing_address_2), 0, 255));
-    $c2pClient->setShopperZipcode(substr($order->billing_postcode, 0, 10));
-    $c2pClient->setShopperCity(substr($order->billing_city, 0, 50));
-    $c2pClient->setShopperState(substr($order->billing_state, 0, 30));
-    $c2pClient->setShopperCountryCode($order->billing_country);
-    $c2pClient->setShopperPhone(substr(trim($order->billing_country), 0, 20));
+    $c2pClient->setShopperID($order->get_customer_id());
+    $c2pClient->setShopperEmail($order->get_billing_email());
+    $c2pClient->setShopperFirstName(substr($order->get_billing_first_name(), 0, 35));
+    $c2pClient->setShopperLastName(substr($order->get_billing_last_name(), 0, 35));
+    $c2pClient->setShopperCompany(substr($order->get_billing_company(), 0, 128));
+    $c2pClient->setShopperAddress(substr(trim($order->get_billing_address_1() . ' ' . $order->get_billing_address_2()), 0, 255));
+    $c2pClient->setShopperZipcode(substr($order->get_billing_postcode(), 0, 10));
+    $c2pClient->setShopperCity(substr($order->get_billing_city(), 0, 50));
+    $c2pClient->setShopperState(substr($order->get_billing_state(), 0, 30));
+    $c2pClient->setShopperCountryCode($order->get_billing_country());
+    $c2pClient->setShopperPhone(substr(trim($order->get_billing_country()), 0, 20));
     $c2pClient->setShippingType(Connect2PayClient::_SHIPPING_TYPE_VIRTUAL);
 
     // Shipping information
     if ('yes' == $this->get_option('send_shipping')) {
-      $c2pClient->setShipToFirstName(substr($order->shipping_first_name, 0, 35));
-      $c2pClient->setShipToLastName(substr($order->shipping_last_name, 0, 35));
-      $c2pClient->setShipToCompany(substr($order->shipping_company, 0, 128));
+      $c2pClient->setShipToFirstName(substr($order->get_shipping_first_name(), 0, 35));
+      $c2pClient->setShipToLastName(substr($order->get_shipping_last_name(), 0, 35));
+      $c2pClient->setShipToCompany(substr($order->get_shipping_company(), 0, 128));
 
       $c2pClient->setShipToPhone(substr(trim(), 0, 20));
 
-      $c2pClient->setShipToAddress(substr(trim($order->shipping_address_1 . " " . $order->shipping_address_2), 0, 255));
-      $c2pClient->setShipToZipcode(substr($order->shipping_postcode, 0, 10));
-      $c2pClient->setShipToCity(substr($order->shipping_city, 0, 50));
-      $c2pClient->setShipToState(substr($order->shipping_state, 0, 30));
-      $c2pClient->setShipToCountryCode($order->shipping_country);
+      $c2pClient->setShipToAddress(substr(trim($order->get_shipping_address_1() . " " . $order->get_shipping_address_2()), 0, 255));
+      $c2pClient->setShipToZipcode(substr($order->get_shipping_postcode(), 0, 10));
+      $c2pClient->setShipToCity(substr($order->get_shipping_city(), 0, 50));
+      $c2pClient->setShipToState(substr($order->get_shipping_state(), 0, 30));
+      $c2pClient->setShipToCountryCode($order->get_shipping_country());
       $c2pClient->setShippingType(Connect2PayClient::_SHIPPING_TYPE_PHYSICAL);
     }
 
     // Order informations
-    $c2pClient->setOrderID(substr($order->id, 0, 100));
-    $c2pClient->setOrderDescription(substr('Invoice:' . $order->id, 0, 255));
-    $c2pClient->setCurrency($order->order_currency);
+    $c2pClient->setOrderID(substr($order->get_id(), 0, 100));
+    $c2pClient->setOrderDescription(substr('Invoice:' . $order->get_id(), 0, 255));
+    $c2pClient->setCurrency($order->get_currency());
 
     $total = number_format($order->order_total * 100, 0, '.', '');
     $c2pClient->setAmount($total);
