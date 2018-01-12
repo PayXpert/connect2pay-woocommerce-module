@@ -48,8 +48,6 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
   private $merchant_notifications_to;
   private $merchant_notifications_lang;
 
-  private $iframeUrl;
-
   /**
    * Constructor for the gateway.
    */
@@ -86,7 +84,10 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     self::$log_enabled = $this->debug;
 
     add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
-    add_action('woocommerce_receipt_payxpert', array($this, 'receipt_page'));
+
+    if ($this->is_iframe_on()) {
+      add_action('woocommerce_receipt_payxpert', array($this, 'receipt_page'));
+    }
 
     if (!$this->is_valid_for_use()) {
       $this->enabled = 'no';
@@ -128,6 +129,19 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
   public function is_valid_for_use() {
     // We allow to use the gateway from any where
     return true;
+  }
+
+  /**
+   * Check if iframe mode is on
+   *
+   * @return bool
+   */
+  public function is_iframe_on() {
+    // We allow to use the gateway from any where
+    if ($this->get_option('iframe_mode') == 'yes') {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -236,6 +250,13 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
             'label' => __('Enable logging', 'payxpert'), /**/
             'default' => 'no', /**/
             'description' => __('Log PayXpert events, such as Callback', 'payxpert') /**/
+        ),
+        'iframe_mode' => array(/**/
+            'title' => __('Iframe mode', 'payxpert'), /**/
+            'type' => 'checkbox', /**/
+            'label' => __('Enable iframe mode', 'payxpert'), /**/
+            'default' => 'no', /**/
+            'description' => __('Enables iframe mode (no redirection)', 'payxpert') /**/
         ) /**/
     );
   }
@@ -318,7 +339,11 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     update_post_meta($order_id, '_payxpert_merchant_token', $c2pClient->getMerchantToken());
     update_post_meta($order_id, '_payxpert_customer_url', $c2pClient->getCustomerRedirectURL());
 
-    return array('result' => 'success', 'redirect' => $order->get_checkout_payment_url(true));
+    $url = $c2pClient->getCustomerRedirectURL();
+
+    if($this->is_iframe_on()) $url = $order->get_checkout_payment_url(true);
+
+    return array('result' => 'success', 'redirect' => $url);
   }
 
   /**
@@ -419,11 +444,9 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
           $this->redirect_to($order->get_checkout_order_received_url());
         } else if ($errorCode == '-1'){
           $message = "Unsuccessful transaction, customer left payment flow. Retrieved data: " . print_r($data, true);
-          $order->update_status('cancelled', $message);
           $this->log($message);
-
+          $this->redirect_to(wc_get_checkout_url());
           wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'error');
-          $this->redirect_to($order->get_cancel_order_url());
         } else {
           wc_add_notice(__('Payment not complete: ' . $status->getErrorMessage(), 'payxpert'), 'error');
           $order->update_status('cancelled', $message);
