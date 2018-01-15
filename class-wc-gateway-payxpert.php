@@ -452,11 +452,9 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
           $this->redirect_to($order->get_checkout_order_received_url());
         } else if ($errorCode == '-1'){
           $message = "Unsuccessful transaction, customer left payment flow. Retrieved data: " . print_r($data, true);
-          $order->update_status('cancelled', $message);
           $this->log($message);
-
-          wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'error');
-          $this->redirect_to($order->get_cancel_order_url());
+          $this->redirect_to(wc_get_checkout_url());
+          wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'notice');
         } else {
           wc_add_notice(__('Payment not complete: ' . $status->getErrorMessage(), 'payxpert'), 'error');
           $order->update_status('cancelled', $message);
