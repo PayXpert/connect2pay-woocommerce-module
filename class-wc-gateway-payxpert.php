@@ -494,6 +494,71 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
             $this->log($message);
           } else {
 
+      $data = $_POST["data"];
+      $order_id = $_GET['order_id'];
+      $merchantToken = get_post_meta($order_id, '_payxpert_merchant_token', true);
+
+      // Setup the client and decrypt the redirect Status
+      if ($c2pClient->handleRedirectStatus($data, $merchantToken)) {
+        // Get the PaymentStatus object
+        $status = $c2pClient->getStatus();
+
+        $errorCode = $status->getErrorCode();
+        $merchantData = $status->getCtrlCustomData();
+        $order = wc_get_order($order_id);
+
+        // errorCode = 000 => payment is successful
+        if ($errorCode == '000') {
+          $transactionId = $status->getTransactionID();
+          $message = "Successful transaction by customer redirection. Transaction Id: " . $transactionId;
+          $this->payment_complete($order, $transactionId, $message, 'payxpert');
+          $order->update_status('completed', $message);
+          $this->log($message);
+          $this->redirect_to($order->get_checkout_order_received_url());
+        } else if ($errorCode == '-1'){
+          $message = "Unsuccessful transaction, customer left payment flow. Retrieved data: " . print_r($data, true);
+          $this->log($message);
+          $this->redirect_to(wc_get_checkout_url());
+          wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'error');
+        } else {
+          wc_add_notice(__('Payment not complete: ' . $status->getErrorMessage(), 'payxpert'), 'error');
+          $order->update_status('cancelled', $message);
+          $this->redirect_to($order->get_cancel_order_url());
+        }
+      }
+    } else {
+
+      if ($c2pClient->handleCallbackStatus()) {
+
+        $status = $c2pClient->getStatus();
+
+        // get the Error code
+        $errorCode = $status->getErrorCode();
+        $errorMessage = $status->getErrorMessage();
+        $transactionId = $status->getTransactionID();
+
+        $order_id = $status->getOrderID();
+
+        $order = wc_get_order($order_id);
+        $merchantToken = $status->getMerchantToken();
+
+        $amount = number_format($status->getAmount() / 100, 2, '.', '');
+
+        $data = compact("errorCode", "errorMessage", "transactionId", "invoiceId", "amount");
+
+        $payxpert_merchant_token = get_post_meta($order_id, '_payxpert_merchant_token', true);
+
+        // Be sure we have the same merchant token
+        if ($payxpert_merchant_token == $merchantToken) {
+          // errorCode = 000 transaction is successfull
+          if ($errorCode == '000') {
+
+            $message = "Successful transaction Callback received with transaction Id: " . $transactionId;
+            $this->payment_complete($order, $transactionId, $message, 'payxpert');
+            $order->update_status('completed', $message);
+            $this->log($message);
+          } else {
+
             $message = "Unsuccessful transaction Callback received with the following information: " . print_r($data, true);
             $order->update_status('cancelled', $message);
             $this->log($message);
@@ -543,6 +608,4 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
       
       exit;
   }
-
-
 }
