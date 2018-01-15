@@ -48,13 +48,15 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
   private $merchant_notifications_to;
   private $merchant_notifications_lang;
 
+  private $iframeUrl;
+
   /**
    * Constructor for the gateway.
    */
   public function __construct() {
     $this->id = 'payxpert';
     $this->has_fields = false;
-    $this->order_button_text = __('Proceed to PayXpert', 'payxpert');
+    $this->order_button_text = $this->get_option('pay_button');
     $this->method_title = __('PayXpert', 'payxpert');
     $this->method_description = '';
     $this->supports = array('products', 'refunds');
@@ -74,6 +76,8 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     $this->connect2_url .= (substr($this->connect2_url, -1) == '/' ? '' : '/');
     $this->api_url = $this->get_option('api_url', 'https://api.payxpert.com');
     $this->api_url .= (substr($this->api_url, -1) == '/' ? '' : '/');
+    $this->home_url = is_ssl() ? home_url('/', 'https') : home_url('/'); //set the urls (cancel or return) based on SSL
+    $this->relay_response_url = add_query_arg('wc-api', 'WC_Gateway_PayXpert', $this->home_url);
 
     $this->merchant_notifications = $this->get_option('merchant_notifications');
     $this->merchant_notifications_to = $this->get_option('merchant_notifications_to');
@@ -82,6 +86,10 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     self::$log_enabled = $this->debug;
 
     add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
+
+    if ($this->is_iframe_on()) {
+      add_action('woocommerce_receipt_payxpert', array($this, 'receipt_page'));
+    }
 
     if (!$this->is_valid_for_use()) {
       $this->enabled = 'no';
@@ -123,6 +131,19 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
   public function is_valid_for_use() {
     // We allow to use the gateway from any where
     return true;
+  }
+
+  /**
+   * Check if iframe mode is on
+   *
+   * @return bool
+   */
+  public function is_iframe_on() {
+    // We allow to use the gateway from any where
+    if ($this->get_option('iframe_mode') == 'yes') {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -208,6 +229,12 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
             'default' => __('Credit Card Payment via PayXpert', 'payxpert'), /**/
             'desc_tip' => true /**/
         ),
+        'pay_button' => array(/**/
+            'title' => __('Pay Button', 'payxpert'), /**/
+            'type' => 'text', /**/
+            'description' => __('"Pay Button" text', 'payxpert'), /**/
+            'default' => __('Proceed to PayXpert', 'payxpert') /**/
+        ),
         'description' => array(/**/
             'title' => __('Description', 'payxpert'), /**/
             'type' => 'text', /**/
@@ -231,6 +258,13 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
             'label' => __('Enable logging', 'payxpert'), /**/
             'default' => 'no', /**/
             'description' => __('Log PayXpert events, such as Callback', 'payxpert') /**/
+        ),
+        'iframe_mode' => array(/**/
+            'title' => __('Iframe mode', 'payxpert'), /**/
+            'type' => 'checkbox', /**/
+            'label' => __('Enable iframe mode', 'payxpert'), /**/
+            'default' => 'no', /**/
+            'description' => __('Enables iframe mode (no redirection)', 'payxpert') /**/
         ) /**/
     );
   }
@@ -242,47 +276,45 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
    * @return array
    */
   public function process_payment($order_id) {
-    $order = wc_get_order($order_id);
-
-    $order->get_checkout_payment_url(true);
+    $order = new WC_Order($order_id);
 
     // init api
     $c2pClient = new Connect2PayClient($this->connect2_url, $this->originator_id, $this->password);
 
     // customer informations
-    $c2pClient->setShopperID($order->customer_user);
-    $c2pClient->setShopperEmail($order->billing_email);
-    $c2pClient->setShopperFirstName(substr($order->billing_first_name, 0, 35));
-    $c2pClient->setShopperLastName(substr($order->billing_last_name, 0, 35));
-    $c2pClient->setShopperCompany(substr($order->billing_company, 0, 128));
-    $c2pClient->setShopperAddress(substr(trim($order->billing_address_1 . ' ' . $order->billing_address_2), 0, 255));
-    $c2pClient->setShopperZipcode(substr($order->billing_postcode, 0, 10));
-    $c2pClient->setShopperCity(substr($order->billing_city, 0, 50));
-    $c2pClient->setShopperState(substr($order->billing_state, 0, 30));
-    $c2pClient->setShopperCountryCode($order->billing_country);
-    $c2pClient->setShopperPhone(substr(trim($order->billing_country), 0, 20));
+    $c2pClient->setShopperID($order->get_customer_id());
+    $c2pClient->setShopperEmail($order->get_billing_email());
+    $c2pClient->setShopperFirstName(substr($order->get_billing_first_name(), 0, 35));
+    $c2pClient->setShopperLastName(substr($order->get_billing_last_name(), 0, 35));
+    $c2pClient->setShopperCompany(substr($order->get_billing_company(), 0, 128));
+    $c2pClient->setShopperAddress(substr(trim($order->get_billing_address_1() . ' ' . $order->get_billing_address_2()), 0, 255));
+    $c2pClient->setShopperZipcode(substr($order->get_billing_postcode(), 0, 10));
+    $c2pClient->setShopperCity(substr($order->get_billing_city(), 0, 50));
+    $c2pClient->setShopperState(substr($order->get_billing_state(), 0, 30));
+    $c2pClient->setShopperCountryCode($order->get_billing_country());
+    $c2pClient->setShopperPhone(substr(trim($order->get_billing_country()), 0, 20));
     $c2pClient->setShippingType(Connect2PayClient::_SHIPPING_TYPE_VIRTUAL);
 
     // Shipping information
     if ('yes' == $this->get_option('send_shipping')) {
-      $c2pClient->setShipToFirstName(substr($order->shipping_first_name, 0, 35));
-      $c2pClient->setShipToLastName(substr($order->shipping_last_name, 0, 35));
-      $c2pClient->setShipToCompany(substr($order->shipping_company, 0, 128));
+      $c2pClient->setShipToFirstName(substr($order->get_shipping_first_name(), 0, 35));
+      $c2pClient->setShipToLastName(substr($order->get_shipping_last_name(), 0, 35));
+      $c2pClient->setShipToCompany(substr($order->get_shipping_company(), 0, 128));
 
       $c2pClient->setShipToPhone(substr(trim(), 0, 20));
 
-      $c2pClient->setShipToAddress(substr(trim($order->shipping_address_1 . " " . $order->shipping_address_2), 0, 255));
-      $c2pClient->setShipToZipcode(substr($order->shipping_postcode, 0, 10));
-      $c2pClient->setShipToCity(substr($order->shipping_city, 0, 50));
-      $c2pClient->setShipToState(substr($order->shipping_state, 0, 30));
-      $c2pClient->setShipToCountryCode($order->shipping_country);
+      $c2pClient->setShipToAddress(substr(trim($order->get_shipping_address_1() . " " . $order->get_shipping_address_2()), 0, 255));
+      $c2pClient->setShipToZipcode(substr($order->get_shipping_postcode(), 0, 10));
+      $c2pClient->setShipToCity(substr($order->get_shipping_city(), 0, 50));
+      $c2pClient->setShipToState(substr($order->get_shipping_state(), 0, 30));
+      $c2pClient->setShipToCountryCode($order->get_shipping_country());
       $c2pClient->setShippingType(Connect2PayClient::_SHIPPING_TYPE_PHYSICAL);
     }
 
     // Order informations
-    $c2pClient->setOrderID(substr($order->id, 0, 100));
-    $c2pClient->setOrderDescription(substr('Invoice:' . $order->id, 0, 255));
-    $c2pClient->setCurrency($order->order_currency);
+    $c2pClient->setOrderID(substr($order->get_id(), 0, 100));
+    $c2pClient->setOrderDescription(substr('Invoice:' . $order->get_id(), 0, 255));
+    $c2pClient->setCurrency($order->get_currency());
 
     $total = number_format($order->order_total * 100, 0, '.', '');
     $c2pClient->setAmount($total);
@@ -290,7 +322,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     $c2pClient->setPaymentType(Connect2PayClient::_PAYMENT_TYPE_CREDITCARD);
 
     $c2pClient->setCtrlCallbackURL(WC()->api_request_url('WC_Gateway_PayXpert'));
-    $c2pClient->setCtrlRedirectURL($order->get_checkout_order_received_url());
+    $c2pClient->setCtrlRedirectURL($this->relay_response_url . '&order_id=' . $order_id);
 
     // Merchant notifications
     if (isset($this->merchant_notifications) && $this->merchant_notifications != null) {
@@ -310,11 +342,16 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
       echo $message;
       return array('result' => 'fail', 'redirect' => '');
     }
-
+    
     // Save the merchant token for callback verification
     update_post_meta($order_id, '_payxpert_merchant_token', $c2pClient->getMerchantToken());
+    update_post_meta($order_id, '_payxpert_customer_url', $c2pClient->getCustomerRedirectURL());
 
-    return array('result' => 'success', 'redirect' => $c2pClient->getCustomerRedirectURL());
+    $url = $c2pClient->getCustomerRedirectURL();
+
+    if($this->is_iframe_on()) $url = $order->get_checkout_payment_url(true);
+
+    return array('result' => 'success', 'redirect' => $url);
   }
 
   /**
@@ -387,58 +424,125 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
    * Check for PayXpert Callback Response
    */
   public function handle_callback() {
+
     $c2pClient = new Connect2PayClient($this->connect2_url, $this->originator_id, $this->password);
 
-    if ($c2pClient->handleCallbackStatus()) {
+    if ($_POST["data"] != null) {
 
-      $status = $c2pClient->getStatus();
+      $data = $_POST["data"];
+      $order_id = $_GET['order_id'];
+      $merchantToken = get_post_meta($order_id, '_payxpert_merchant_token', true);
 
-      // get the Error code
-      $errorCode = $status->getErrorCode();
-      $errorMessage = $status->getErrorMessage();
-      $transactionId = $status->getTransactionID();
+      // Setup the client and decrypt the redirect Status
+      if ($c2pClient->handleRedirectStatus($data, $merchantToken)) {
+        // Get the PaymentStatus object
+        $status = $c2pClient->getStatus();
 
-      $order_id = $status->getOrderID();
+        $errorCode = $status->getErrorCode();
+        $merchantData = $status->getCtrlCustomData();
+        $order = wc_get_order($order_id);
 
-      $order = wc_get_order($order_id);
-      $merchantToken = $status->getMerchantToken();
-
-      $amount = number_format($status->getAmount() / 100, 2, '.', '');
-
-      $data = compact("errorCode", "errorMessage", "transactionId", "invoiceId", "amount");
-
-      $payxpert_merchant_token = get_post_meta($order_id, '_payxpert_merchant_token', true);
-
-      // Be sure we have the same merchant token
-      if ($payxpert_merchant_token == $merchantToken) {
-        // errorCode = 000 transaction is successfull
+        // errorCode = 000 => payment is successful
         if ($errorCode == '000') {
-
-          $message = "Successful transaction Callback received with transaction Id: " . $transactionId;
+          $transactionId = $status->getTransactionID();
+          $message = "Successful transaction by customer redirection. Transaction Id: " . $transactionId;
           $this->payment_complete($order, $transactionId, $message, 'payxpert');
+          $order->update_status('completed', $message);
           $this->log($message);
+          $this->redirect_to($order->get_checkout_order_received_url());
+        } else if ($errorCode == '-1'){
+          $message = "Unsuccessful transaction, customer left payment flow. Retrieved data: " . print_r($data, true);
+          $this->log($message);
+          $this->redirect_to(wc_get_checkout_url());
+          wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'error');
         } else {
-
-          $message = "Unsuccessful transaction Callback received with the following information: " . print_r($data, true);
-          $order->update_status('failed', $message);
-          $this->log($message);
+          wc_add_notice(__('Payment not complete: ' . $status->getErrorMessage(), 'payxpert'), 'error');
+          $order->update_status('cancelled', $message);
+          $this->redirect_to($order->get_cancel_order_url());
         }
-      } else {
-        // We do not update the status of the transaction, we just log the
-        // message
-        $message = "Error. Invalid token " . $merchantToken . " for order " . $order->id . " in callback from " . $_SERVER["REMOTE_ADDR"];
-        $this->log($message);
       }
-
-      // Send a response to mark this transaction as notified
-      $response = array("status" => "OK", "message" => "Status recorded");
-      header("Content-type: application/json");
-      echo json_encode($response);
-      exit();
     } else {
 
-      $this->log("Error: Callback received an incorrect status from " . $_SERVER["REMOTE_ADDR"]);
-      wp_die("PayXpert Callback Failed", "PayXpert", array('response' => 500));
+      if ($c2pClient->handleCallbackStatus()) {
+
+        $status = $c2pClient->getStatus();
+
+        // get the Error code
+        $errorCode = $status->getErrorCode();
+        $errorMessage = $status->getErrorMessage();
+        $transactionId = $status->getTransactionID();
+
+        $order_id = $status->getOrderID();
+
+        $order = wc_get_order($order_id);
+        $merchantToken = $status->getMerchantToken();
+
+        $amount = number_format($status->getAmount() / 100, 2, '.', '');
+
+        $data = compact("errorCode", "errorMessage", "transactionId", "invoiceId", "amount");
+
+        $payxpert_merchant_token = get_post_meta($order_id, '_payxpert_merchant_token', true);
+
+        // Be sure we have the same merchant token
+        if ($payxpert_merchant_token == $merchantToken) {
+          // errorCode = 000 transaction is successfull
+          if ($errorCode == '000') {
+
+            $message = "Successful transaction Callback received with transaction Id: " . $transactionId;
+            $this->payment_complete($order, $transactionId, $message, 'payxpert');
+            $order->update_status('completed', $message);
+            $this->log($message);
+          } else {
+
+            $message = "Unsuccessful transaction Callback received with the following information: " . print_r($data, true);
+            $order->update_status('cancelled', $message);
+            $this->log($message);
+          }
+        } else {
+          // We do not update the status of the transaction, we just log the
+          // message
+          $message = "Error. Invalid token " . $merchantToken . " for order " . $order->id . " in callback from " . $_SERVER["REMOTE_ADDR"];
+          $this->log($message);
+        }
+
+        // Send a response to mark this transaction as notified
+        $response = array("status" => "OK", "message" => "Status recorded");
+        header("Content-type: application/json");
+        echo json_encode($response);
+        exit();
+      } else {
+
+        $this->log("Error: Callback received an incorrect status from " . $_SERVER["REMOTE_ADDR"]);
+        wp_die("PayXpert Callback Failed", "PayXpert", array('response' => 500));
+      }
+
     }
+    
   }
+
+  public function receipt_page($order_id) {
+
+      //define the url
+      $payxpert_customer_url = get_post_meta($order_id, '_payxpert_customer_url', true);
+
+      //display the form
+      ?>
+      <iframe id="payxpert_for_woocommerce_iframe" src="<?php echo $payxpert_customer_url; ?>" width="100%" height="700" scrolling="no" frameborder="0" border="0" allowtransparency="true"></iframe>
+
+      <?php
+  }
+
+  public function redirect_to($redirect_url) {
+      // Clean
+      @ob_clean();
+
+      // Header
+      header('HTTP/1.1 200 OK');
+
+      echo "<script>window.parent.location.href='" . $redirect_url . "';</script>";
+      
+      exit;
+  }
+
+
 }
