@@ -47,16 +47,13 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
   private $merchant_notifications;
   private $merchant_notifications_to;
   private $merchant_notifications_lang;
-
-  private $iframeUrl;
-
+  
   /**
    * Constructor for the gateway.
    */
   public function __construct() {
     $this->id = 'payxpert';
     $this->has_fields = false;
-    $this->order_button_text = $this->get_option('pay_button');
     $this->method_title = __('PayXpert', 'payxpert');
     $this->method_description = '';
     $this->supports = array('products', 'refunds');
@@ -69,6 +66,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     $this->title = $this->get_option('title');
     $this->description = $this->get_option('description');
     $this->testmode = 'no';
+    $this->order_button_text = $this->get_option('pay_button');
     $this->debug = 'yes' === $this->get_option('debug', 'no');
     $this->originator_id = $this->get_option('originator_id');
     $this->password = $this->get_option('password');
@@ -457,8 +455,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
           wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'notice');
         } else {
           wc_add_notice(__('Payment not complete: ' . $status->getErrorMessage(), 'payxpert'), 'error');
-          $order->update_status('cancelled', $message);
-          $this->redirect_to($order->get_cancel_order_url());
+          $this->redirect_to(wc_get_checkout_url());
         }
       }
     } else {
@@ -495,7 +492,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
           } else {
 
             $message = "Unsuccessful transaction Callback received with the following information: " . print_r($data, true);
-            $order->update_status('cancelled', $message);
+            $order->add_order_note($message);
             $this->log($message);
           }
         } else {
