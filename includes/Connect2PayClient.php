@@ -1,69 +1,265 @@
 <?php
 
+namespace PayXpert\Connect2Pay;
+
 /**
- * Client class for the connect2pay payment page.
- * The normal workflow is as follow:
+ * Copyright 2013-2018 PayXpert
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Client class for the PayXpert payment page system.
+ *
+ * The normal workflow is as follows:
  * - Instantiate the class
- * - Set all the required parameters of the transaction
- * - Call prepareTransaction() to create the transaction
+ * - Set all the required parameters of the payment
+ * - Call preparePayment() to create the payment
  * - Call getCustomerRedirectURL() and redirect the customer to this URL
- * - If receiving result via callback, use handleCallbackStatus to initialize the status from the POST request
- * - If receiving result via customer redirection, use handleRedirectStatus to initialize the status from the POST data
+ * - If receiving result via callback, use handleCallbackStatus to initialize
+ * the status from the POST request (don't forget to authenticate the received
+ * callback)
+ * - If receiving result via customer redirection, use handleRedirectStatus to
+ * initialize the status from the POST data
  *
  * This class does not do any sanitization on received data.
  * This must be done externally.
  * Every text must be encoded as UTF-8 when passed to this class.
  *
  * PHP dependencies:
- * PHP >= 5.2.0
- * PHP CURL module
- * PHP Mcrypt module
- *
- * @version 2.0.6
- * @author Jérôme Schell <jsh@payxpert.com>
- * @author Yann Finck <yann@iiiaaa.fr>
- * @copyright 2011-2016 Payxpert
- *
+ * PHP >= 5.3.0
+ * PHP CURL extension
+ * PHP OpenSSL extension
  */
 class Connect2PayClient {
-  /**
-   * Payment types constants
+  /*
+   * Client version
    */
-  const _PAYMENT_TYPE_CREDITCARD = "CreditCard";
-  const _PAYMENT_TYPE_TODITOCASH = "ToditoCash";
+  const CLIENT_VERSION = "2.13.0";
 
+  /*
+   * API version implemented by this class
+   */
+  const API_VERSION = "002.61";
+
+  /*
+   * Payment methods constants
+   */
+  const PAYMENT_METHOD_CREDITCARD = 'CreditCard';
+  const PAYMENT_METHOD_TODITOCASH = 'ToditoCash';
+  const PAYMENT_METHOD_BANKTRANSFER = 'BankTransfer';
+  const PAYMENT_METHOD_DIRECTDEBIT = 'DirectDebit';
+  const PAYMENT_METHOD_WECHAT = 'WeChat';
+  const PAYMENT_METHOD_LINE = 'Line';
+  const PAYMENT_METHOD_ALIPAY = 'AliPay';
+
+  /*
+   * Legacy payment types
+   */
   /**
+   *
+   * @deprecated Use PAYMENT_METHOD_CREDITCARD
+   */
+  const _PAYMENT_TYPE_CREDITCARD = self::PAYMENT_METHOD_CREDITCARD;
+  /**
+   *
+   * @deprecated Use PAYMENT_METHOD_TODITOCASH
+   */
+  const _PAYMENT_TYPE_TODITOCASH = self::PAYMENT_METHOD_TODITOCASH;
+  /**
+   *
+   * @deprecated Use PAYMENT_METHOD_BANKTRANSFER
+   */
+  const _PAYMENT_TYPE_BANKTRANSFER = self::PAYMENT_METHOD_BANKTRANSFER;
+  /**
+   *
+   * @deprecated Use PAYMENT_METHOD_DIRECTDEBIT
+   */
+  const _PAYMENT_TYPE_DIRECTDEBIT = self::PAYMENT_METHOD_DIRECTDEBIT;
+  /**
+   *
+   * @deprecated Use PAYMENT_METHOD_WECHAT
+   */
+  const _PAYMENT_TYPE_WECHAT = self::PAYMENT_METHOD_WECHAT;
+  /**
+   *
+   * @deprecated Use PAYMENT_METHOD_LINE
+   */
+  const _PAYMENT_TYPE_LINE = self::PAYMENT_METHOD_LINE;
+
+  /*
+   * Payment networks constants
+   */
+  const PAYMENT_NETWORK_SOFORT = 'sofort';
+  const PAYMENT_NETWORK_PRZELEWY24 = 'przelewy24';
+  const PAYMENT_NETWORK_IDEAL = 'ideal';
+  const PAYMENT_NETWORK_GIROPAY = 'giropay';
+  const PAYMENT_NETWORK_EPS = 'eps';
+  const PAYMENT_NETWORK_POLI = 'poli';
+  const PAYMENT_NETWORK_DRAGONPAY = 'dragonpay';
+  const PAYMENT_NETWORK_TRUSTLY = 'trustly';
+
+  /*
+   * Legacy payment providers constants
+   */
+  /**
+   *
+   * @deprecated Use PAYMENT_NETWORK_SOFORT
+   */
+  const _PAYMENT_PROVIDER_SOFORT = self::PAYMENT_NETWORK_SOFORT;
+  /**
+   *
+   * @deprecated Use PAYMENT_NETWORK_PRZELEWY24
+   */
+  const _PAYMENT_PROVIDER_PRZELEWY24 = self::PAYMENT_NETWORK_PRZELEWY24;
+  /**
+   *
+   * @deprecated Use PAYMENT_NETWORK_IDEAL
+   */
+  const _PAYMENT_PROVIDER_IDEAL = self::PAYMENT_NETWORK_IDEAL;
+  /**
+   *
+   * @deprecated Use PAYMENT_NETWORK_GIROPAY
+   */
+  const _PAYMENT_PROVIDER_GIROPAY = self::PAYMENT_NETWORK_GIROPAY;
+
+  /*
+   * Operation types constants
+   */
+  const OPERATION_TYPE_SALE = 'sale';
+  const OPERATION_TYPE_AUTHORIZE = 'authorize';
+  /**
+   *
+   * @deprecated Use OPERATION_TYPE_SALE
+   */
+  const _OPERATION_TYPE_SALE = self::OPERATION_TYPE_SALE;
+  /**
+   *
+   * @deprecated Use OPERATION_TYPE_AUTHORIZE
+   */
+  const _OPERATION_TYPE_AUTHORIZE = self::OPERATION_TYPE_AUTHORIZE;
+
+  /*
    * Payment modes constants
    */
-  const _PAYMENT_MODE_SINGLE = "Single";
-  const _PAYMENT_MODE_ONSHIPPING = "OnShipping";
-  const _PAYMENT_MODE_RECURRENT = "Recurrent";
-  const _PAYMENT_MODE_INSTALMENTS = "InstalmentsPayments";
-
+  const PAYMENT_MODE_SINGLE = 'Single';
+  const PAYMENT_MODE_ONSHIPPING = 'OnShipping';
+  const PAYMENT_MODE_RECURRENT = 'Recurrent';
+  const PAYMENT_MODE_INSTALMENTS = 'InstalmentsPayments';
   /**
+   *
+   * @deprecated Use PAYMENT_MODE_SINGLE
+   */
+  const _PAYMENT_MODE_SINGLE = self::PAYMENT_MODE_SINGLE;
+  /**
+   *
+   * @deprecated Use PAYMENT_MODE_ONSHIPPING
+   */
+  const _PAYMENT_MODE_ONSHIPPING = self::PAYMENT_MODE_ONSHIPPING;
+  /**
+   *
+   * @deprecated Use PAYMENT_MODE_RECURRENT
+   */
+  const _PAYMENT_MODE_RECURRENT = self::PAYMENT_MODE_RECURRENT;
+  /**
+   *
+   * @deprecated Use PAYMENT_MODE_INSTALMENTS
+   */
+  const _PAYMENT_MODE_INSTALMENTS = self::PAYMENT_MODE_INSTALMENTS;
+
+  /*
    * Shipping types constants
    */
-  const _SHIPPING_TYPE_PHYSICAL = "Physical";
-  const _SHIPPING_TYPE_ACCESS = "Access";
-  const _SHIPPING_TYPE_VIRTUAL = "Virtual";
-
+  const SHIPPING_TYPE_PHYSICAL = 'Physical';
+  const SHIPPING_TYPE_ACCESS = 'Access';
+  const SHIPPING_TYPE_VIRTUAL = 'Virtual';
   /**
+   *
+   * @deprecated Use SHIPPING_TYPE_PHYSICAL
+   */
+  const _SHIPPING_TYPE_PHYSICAL = self::SHIPPING_TYPE_PHYSICAL;
+  /**
+   *
+   * @deprecated Use SHIPPING_TYPE_ACCESS
+   */
+  const _SHIPPING_TYPE_ACCESS = self::SHIPPING_TYPE_ACCESS;
+  /**
+   *
+   * @deprecated Use SHIPPING_TYPE_VIRTUAL
+   */
+  const _SHIPPING_TYPE_VIRTUAL = self::SHIPPING_TYPE_VIRTUAL;
+
+  /*
    * Subscription types constants
    */
-  const _SUBSCRIPTION_TYPE_NORMAL = "normal";
-  const _SUBSCRIPTION_TYPE_LIFETIME = "lifetime";
-  const _SUBSCRIPTION_TYPE_ONETIME = "onetime";
-  const _SUBSCRIPTION_TYPE_INFINITE = "infinite";
-
+  const SUBSCRIPTION_TYPE_NORMAL = 'normal';
+  const SUBSCRIPTION_TYPE_PARTPAYMENT = 'partpayment';
+  const SUBSCRIPTION_TYPE_LIFETIME = 'lifetime';
+  const SUBSCRIPTION_TYPE_ONETIME = 'onetime';
+  const SUBSCRIPTION_TYPE_INFINITE = 'infinite';
   /**
+   *
+   * @deprecated Use SUBSCRIPTION_TYPE_NORMAL
+   */
+  const _SUBSCRIPTION_TYPE_NORMAL = self::SUBSCRIPTION_TYPE_NORMAL;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_TYPE_LIFETIME
+   */
+  const _SUBSCRIPTION_TYPE_LIFETIME = self::SUBSCRIPTION_TYPE_LIFETIME;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_TYPE_ONETIME
+   */
+  const _SUBSCRIPTION_TYPE_ONETIME = self::SUBSCRIPTION_TYPE_ONETIME;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_TYPE_INFINITE
+   */
+  const _SUBSCRIPTION_TYPE_INFINITE = self::SUBSCRIPTION_TYPE_INFINITE;
+
+  /*
    * Lang constants
    */
-  const _LANG_EN = "en";
-  const _LANG_FR = "fr";
-  const _LANG_ES = "es";
-  const _LANG_IT = "it";
+  const LANG_EN = 'en';
+  const LANG_FR = 'fr';
+  const LANG_ES = 'es';
+  const LANG_IT = 'it';
+  const LANG_DE = 'de';
+  const LANG_ZH_HANT = 'zh_hant';
 
   /**
+   *
+   * @deprecated Use LANG_EN
+   */
+  const _LANG_EN = self::LANG_EN;
+  /**
+   *
+   * @deprecated Use LANG_FR
+   */
+  const _LANG_FR = self::LANG_FR;
+  /**
+   *
+   * @deprecated Use LANG_ES
+   */
+  const _LANG_ES = self::LANG_ES;
+  /**
+   *
+   * @deprecated Use LANG_IT
+   */
+  const _LANG_IT = self::LANG_IT;
+
+  /*
    * ~~~~
    * Subscription cancel reasons
    * ~~~~
@@ -71,208 +267,424 @@ class Connect2PayClient {
   /**
    * Bank denial
    */
-  const _SUBSCRIPTION_CANCEL_BANK_DENIAL = 1000;
+  const SUBSCRIPTION_CANCEL_BANK_DENIAL = 1000;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_BANK_DENIAL
+   */
+  const _SUBSCRIPTION_CANCEL_BANK_DENIAL = self::SUBSCRIPTION_CANCEL_BANK_DENIAL;
+
   /**
    * Canceled due to refund
    */
-  const _SUBSCRIPTION_CANCEL_REFUNDED = 1001;
+  const SUBSCRIPTION_CANCEL_REFUNDED = 1001;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_REFUNDED
+   */
+  const _SUBSCRIPTION_CANCEL_REFUNDED = self::SUBSCRIPTION_CANCEL_REFUNDED;
+
   /**
    * Canceled due to retrieval request
    */
-  const _SUBSCRIPTION_CANCEL_RETRIEVAL = 1002;
+  const SUBSCRIPTION_CANCEL_RETRIEVAL = 1002;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_RETRIEVAL
+   */
+  const _SUBSCRIPTION_CANCEL_RETRIEVAL = self::SUBSCRIPTION_CANCEL_RETRIEVAL;
+
   /**
    * Cancellation letter sent by bank
    */
-  const _SUBSCRIPTION_CANCEL_BANK_LETTER = 1003;
+  const SUBSCRIPTION_CANCEL_BANK_LETTER = 1003;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_BANK_LETTER
+   */
+  const _SUBSCRIPTION_CANCEL_BANK_LETTER = self::SUBSCRIPTION_CANCEL_BANK_LETTER;
+
   /**
    * Chargeback
    */
-  const _SUBSCRIPTION_CANCEL_CHARGEBACK = 1004;
+  const SUBSCRIPTION_CANCEL_CHARGEBACK = 1004;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_CHARGEBACK
+   */
+  const _SUBSCRIPTION_CANCEL_CHARGEBACK = self::SUBSCRIPTION_CANCEL_CHARGEBACK;
+
   /**
    * Company account closed
    */
-  const _SUBSCRIPTION_CANCEL_COMPANY_ACCOUNT_CLOSED = 1005;
+  const SUBSCRIPTION_CANCEL_COMPANY_ACCOUNT_CLOSED = 1005;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_COMPANY_ACCOUNT_CLOSED
+   */
+  const _SUBSCRIPTION_CANCEL_COMPANY_ACCOUNT_CLOSED = self::SUBSCRIPTION_CANCEL_COMPANY_ACCOUNT_CLOSED;
+
   /**
    * Site account closed
    */
-  const _SUBSCRIPTION_CANCEL_WEBSITE_ACCOUNT_CLOSED = 1006;
+  const SUBSCRIPTION_CANCEL_WEBSITE_ACCOUNT_CLOSED = 1006;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_WEBSITE_ACCOUNT_CLOSED
+   */
+  const _SUBSCRIPTION_CANCEL_WEBSITE_ACCOUNT_CLOSED = self::SUBSCRIPTION_CANCEL_WEBSITE_ACCOUNT_CLOSED;
+
   /**
    * Didn't like the site
    */
-  const _SUBSCRIPTION_CANCEL_DID_NOT_LIKE = 1007;
+  const SUBSCRIPTION_CANCEL_DID_NOT_LIKE = 1007;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_DID_NOT_LIKE
+   */
+  const _SUBSCRIPTION_CANCEL_DID_NOT_LIKE = self::SUBSCRIPTION_CANCEL_DID_NOT_LIKE;
+
   /**
    * Disagree ('Did not do it' or 'Do not recognize the transaction')
    */
-  const _SUBSCRIPTION_CANCEL_DISAGREE = 1008;
+  const SUBSCRIPTION_CANCEL_DISAGREE = 1008;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_DISAGREE
+   */
+  const _SUBSCRIPTION_CANCEL_DISAGREE = self::SUBSCRIPTION_CANCEL_DISAGREE;
+
   /**
    * Fraud from webmaster
    */
-  const _SUBSCRIPTION_CANCEL_WEBMASTER_FRAUD = 1009;
+  const SUBSCRIPTION_CANCEL_WEBMASTER_FRAUD = 1009;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_WEBMASTER_FRAUD
+   */
+  const _SUBSCRIPTION_CANCEL_WEBMASTER_FRAUD = self::SUBSCRIPTION_CANCEL_WEBMASTER_FRAUD;
+
   /**
    * I could not get in to the site
    */
-  const _SUBSCRIPTION_CANCEL_COULD_NOT_GET_INTO = 1010;
+  const SUBSCRIPTION_CANCEL_COULD_NOT_GET_INTO = 1010;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_COULD_NOT_GET_INTO
+   */
+  const _SUBSCRIPTION_CANCEL_COULD_NOT_GET_INTO = self::SUBSCRIPTION_CANCEL_COULD_NOT_GET_INTO;
+
   /**
    * No problem, just moving on
    */
-  const _SUBSCRIPTION_CANCEL_NO_PROBLEM = 1011;
+  const SUBSCRIPTION_CANCEL_NO_PROBLEM = 1011;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_NO_PROBLEM
+   */
+  const _SUBSCRIPTION_CANCEL_NO_PROBLEM = self::SUBSCRIPTION_CANCEL_NO_PROBLEM;
+
   /**
    * Not enough updates
    */
-  const _SUBSCRIPTION_CANCEL_NOT_UPDATED = 1012;
+  const SUBSCRIPTION_CANCEL_NOT_UPDATED = 1012;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_NOT_UPDATED
+   */
+  const _SUBSCRIPTION_CANCEL_NOT_UPDATED = self::SUBSCRIPTION_CANCEL_NOT_UPDATED;
+
   /**
    * Problems with the movies/videos
    */
-  const _SUBSCRIPTION_CANCEL_TECH_PROBLEM = 1013;
+  const SUBSCRIPTION_CANCEL_TECH_PROBLEM = 1013;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_TECH_PROBLEM
+   */
+  const _SUBSCRIPTION_CANCEL_TECH_PROBLEM = self::SUBSCRIPTION_CANCEL_TECH_PROBLEM;
+
   /**
    * Site was too slow
    */
-  const _SUBSCRIPTION_CANCEL_TOO_SLOW = 1014;
+  const SUBSCRIPTION_CANCEL_TOO_SLOW = 1014;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_TOO_SLOW
+   */
+  const _SUBSCRIPTION_CANCEL_TOO_SLOW = self::SUBSCRIPTION_CANCEL_TOO_SLOW;
+
   /**
    * The site did not work
    */
-  const _SUBSCRIPTION_CANCEL_DID_NOT_WORK = 1015;
+  const SUBSCRIPTION_CANCEL_DID_NOT_WORK = 1015;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_DID_NOT_WORK
+   */
+  const _SUBSCRIPTION_CANCEL_DID_NOT_WORK = self::SUBSCRIPTION_CANCEL_DID_NOT_WORK;
+
   /**
    * Too expensive
    */
-  const _SUBSCRIPTION_CANCEL_TOO_EXPENSIVE = 1016;
+  const SUBSCRIPTION_CANCEL_TOO_EXPENSIVE = 1016;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_TOO_EXPENSIVE
+   */
+  const _SUBSCRIPTION_CANCEL_TOO_EXPENSIVE = self::SUBSCRIPTION_CANCEL_TOO_EXPENSIVE;
+
   /**
    * Un-authorized signup by family member
    */
-  const _SUBSCRIPTION_CANCEL_UNAUTH_FAMILLY = 1017;
+  const SUBSCRIPTION_CANCEL_UNAUTH_FAMILLY = 1017;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_UNAUTH_FAMILLY
+   */
+  const _SUBSCRIPTION_CANCEL_UNAUTH_FAMILLY = self::SUBSCRIPTION_CANCEL_UNAUTH_FAMILLY;
+
   /**
    * Undetermined reasons
    */
-  const _SUBSCRIPTION_CANCEL_UNDETERMINED = 1018;
+  const SUBSCRIPTION_CANCEL_UNDETERMINED = 1018;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_UNDETERMINED
+   */
+  const _SUBSCRIPTION_CANCEL_UNDETERMINED = self::SUBSCRIPTION_CANCEL_UNDETERMINED;
+
   /**
    * Webmaster requested to cancel
    */
-  const _SUBSCRIPTION_CANCEL_WEBMASTER_REQUESTED = 1019;
+  const SUBSCRIPTION_CANCEL_WEBMASTER_REQUESTED = 1019;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_WEBMASTER_REQUESTED
+   */
+  const _SUBSCRIPTION_CANCEL_WEBMASTER_REQUESTED = self::SUBSCRIPTION_CANCEL_WEBMASTER_REQUESTED;
+
   /**
    * I haven't received my item
    */
-  const _SUBSCRIPTION_CANCEL_NOTHING_RECEIVED = 1020;
+  const SUBSCRIPTION_CANCEL_NOTHING_RECEIVED = 1020;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_NOTHING_RECEIVED
+   */
+  const _SUBSCRIPTION_CANCEL_NOTHING_RECEIVED = self::SUBSCRIPTION_CANCEL_NOTHING_RECEIVED;
+
   /**
    * The item was damaged or defective
    */
-  const _SUBSCRIPTION_CANCEL_DAMAGED = 1021;
+  const SUBSCRIPTION_CANCEL_DAMAGED = 1021;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_DAMAGED
+   */
+  const _SUBSCRIPTION_CANCEL_DAMAGED = self::SUBSCRIPTION_CANCEL_DAMAGED;
+
   /**
    * The box was empty
    */
-  const _SUBSCRIPTION_CANCEL_EMPTY_BOX = 1022;
+  const SUBSCRIPTION_CANCEL_EMPTY_BOX = 1022;
+  /**
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_EMPTY_BOX
+   */
+  const _SUBSCRIPTION_CANCEL_EMPTY_BOX = self::SUBSCRIPTION_CANCEL_EMPTY_BOX;
+
   /**
    * The order was incomplete
    */
-  const _SUBSCRIPTION_CANCEL_INCOMPLETE_ORDER = 1023;
-
+  const SUBSCRIPTION_CANCEL_INCOMPLETE_ORDER = 1023;
   /**
-   * Field content constant
+   *
+   * @deprecated Use SUBSCRIPTION_CANCEL_INCOMPLETE_ORDER
    */
-  const _UNAVAILABLE = "NA";
-  const _UNAVAILABLE_COUNTRY = "ZZ";
+  const _SUBSCRIPTION_CANCEL_INCOMPLETE_ORDER = self::SUBSCRIPTION_CANCEL_INCOMPLETE_ORDER;
+
+  /*
+   * Field content constants
+   */
+  /**
+   * To be used when a parameter is not available
+   *
+   * @var string
+   */
+  const UNAVAILABLE_PARAM = 'NA';
+  /**
+   * To be used when a country is not available
+   *
+   * @var string
+   */
+  const UNAVAILABLE_COUNTRY = 'ZZ';
+  /**
+   *
+   * @deprecated Use UNAVAILABLE_PARAM
+   */
+  const _UNAVAILABLE = self::UNAVAILABLE_PARAM;
+  /**
+   *
+   * @deprecated Use UNAVAILABLE_COUNTRY
+   */
+  const _UNAVAILABLE_COUNTRY = self::UNAVAILABLE_COUNTRY;
+
+  /*
+   * API calls routes
+   */
   private static $API_ROUTES = array(/* */
-      "TRANS_PREPARE" => "/transaction/prepare", /* */
-      "TRANS_STATUS" => "/transaction/:merchantToken/status", /* */
-      "TRANS_DOPAY" => "/transaction/:customerToken", /* */
-      "SUB_CANCEL" => "/subscription/:subscriptionID/cancel"
+      'ACCOUNT_INFO' => '/account', /* */
+      'TRANS_PREPARE' => '/payment/prepare', /* */
+      'PAYMENT_STATUS' => '/payment/:merchantToken/status', /* */
+      'TRANS_INFO' => '/transaction/:transactionID/info', /* */
+      'TRANS_EXPORT' => '/transactions/export', /* */
+      'TRANS_REFUND' => '/transaction/:transactionID/refund', /* */
+      'TRANS_REBILL' => '/transaction/:transactionID/rebill', /* */
+      'TRANS_CANCEL' => '/transaction/:transactionID/cancel', /* */
+      'TRANS_CAPTURE' => '/transaction/:transactionID/capture', /* */
+      'TRANS_DOPAY' => '/payment/:customerToken', /* */
+      'SUB_CANCEL' => '/subscription/:subscriptionID/cancel', /* */
+      'WECHAT_DIRECT_PROCESS' => '/payment/:customerToken/process/wechat/direct', /* */
+      'ALIPAY_DIRECT_PROCESS' => '/payment/:customerToken/process/alipay/direct' /* */
   );
-  protected $fieldsRequired = array(
-      'orderID',
-      'currency',
-      'amount',
-      'shippingType',
-      'paymentMode'
+
+  /*
+   * Fields required for payment creation
+   */
+  protected $fieldsRequired = array('orderID', 'currency', 'amount', 'shippingType', 'paymentMode');
+
+  /*
+   * Fields maximum size
+   */
+  protected $fieldsSize = array(/* */
+    'shopperID' => 32, /* */
+    'shopperEmail' => 100, /* */
+    'shipToCountryCode' => 2, /* */
+    'shopperCountryCode' => 2, /* */
+    'affiliateID' => 16, /* */
+    'campaignName' => 128, /* */
+    'orderID' => 100, /* */
+    'orderDescription' => 500, /* */
+    'currency' => 3, /* */
+    'orderFOLanguage' => 50, /* */
+    'shippingType' => 50, /* */
+    'shippingName' => 50, /* */
+    'paymentMethod' => 32, /* */
+    'operation' => 32, /* */
+    'paymentMode' => 30, /* */
+    'subscriptionType' => 32, /* */
+    'trialPeriod' => 10, /* */
+    'rebillPeriod' => 10, /* */
+    'ctrlRedirectURL' => 2048, /* */
+    'ctrlCallbackURL' => 2048, /* */
+    'timeOut' => 10, /* */
+    'merchantNotificationTo' => 100, /* */
+    'merchantNotificationLang' => 10, /* */
+    'ctrlCustomData' => 2048 /* */
   );
-  protected $fieldsSize = array(
-      'currency' => 3,
-      'ctrlRedirectURL' => 2048,
-      'ctrlCallbackURL' => 2048,
-      'ctrlCustomData' => 2048
+
+  /*
+   * Fields validation constraints
+   */
+  protected $fieldsValidate = array(/* */
+    'shopperID' => 'isString', /* */
+    'shopperEmail' => 'isEmail', /* */
+    'shipToCountryCode' => 'isCountryName', /* */
+    'shopperCountryCode' => 'isCountryName', /* */
+    'affiliateID' => 'isNumeric', /* */
+    'campaignName' => 'isString', /* */
+    'orderID' => 'isString', /* */
+    'orderDescription' => 'isString', /* */
+    'currency' => 'isString', /* */
+    'amount' => 'isInt', /* */
+    'orderTotalWithoutShipping' => 'isInt', /* */
+    'orderShippingPrice' => 'isInt', /* */
+    'orderDiscount' => 'isInt', /* */
+    'orderFOLanguage' => 'isString', /* */
+    'shippingType' => 'isShippingType', /* */
+    'shippingName' => 'isString', /* */
+    'paymentMethod' => 'isPaymentMethod', /* */
+    'paymentNetwork' => 'isPaymentNetwork', /* */
+    'operation' => 'isOperation', /* */
+    'paymentMode' => 'isPaymentMode', /* */
+    'offerID' => 'isInt', /* */
+    'subscriptionType' => 'isSubscriptionType', /* */
+    'trialPeriod' => 'isString', /* */
+    'rebillAmount' => 'isInt', /* */
+    'rebillPeriod' => 'isString', /* */
+    'rebillMaxIteration' => 'isInt', /* */
+    'ctrlRedirectURL' => 'isAbsoluteUrl', /* */
+    'ctrlCallbackURL' => 'isAbsoluteUrl', /* */
+    'timeOut' => 'isString', /* */
+    'merchantNotification' => 'isBool', /* */
+    'merchantNotificationTo' => 'isEmail', /* */
+    'merchantNotificationLang' => 'isString', /* */
+    'themeID' => 'isInt' /* */
   );
-  protected $fieldsValidate = array(
-      'shopperID' => 'isInt',
-      'shopperEmail' => 'isEmail',
-      'shipToCountryCode' => 'isCountryName',
-      'shopperCountryCode' => 'isCountryName',
-      'orderID' => 'isString',
-      'orderDescription' => 'isString',
-      'currency' => 'isString',
-      'amount' => 'isInt',
-      'orderTotalWithoutShipping' => 'isInt',
-      'orderShippingPrice' => 'isInt',
-      'orderDiscount' => 'isInt',
-      'orderFOLanguage' => 'isString',
-      'shippingType' => 'isShippingType',
-      'shippingName' => 'isString',
-      'paymentType' => 'isPayment',
-      'paymentMode' => 'isPaymentMode',
-      'offerID' => 'isInt',
-      'subscriptionType' => 'isSubscriptionType',
-      'trialPeriod' => 'isString',
-      'rebillAmount' => 'isInt',
-      'rebillPeriod' => 'isString',
-      'rebillMaxIteration' => 'isInt',
-      'ctrlRedirectURL' => 'isAbsoluteUrl',
-      'ctrlCallbackURL' => 'isAbsoluteUrl',
-      'timeOut' => 'isString',
-      'merchantNotification' => 'isBool',
-      'merchantNotificationTo' => 'isEmail',
-      'merchantNotificationLang' => 'isString',
-      'themeID' => 'isInt'
+
+  /*
+   * Fields to be included in JSON
+   */
+  protected $fieldsJSON = array(/* */
+    'apiVersion', /* */
+    'shopperID', /* */
+    'shopperEmail', /* */
+    'shipToFirstName', /* */
+    'shipToLastName', /* */
+    'shipToCompany', /* */
+    'shipToPhone', /* */
+    'shipToAddress', /* */
+    'shipToState', /* */
+    'shipToZipcode', /* */
+    'shipToCity', /* */
+    'shipToCountryCode', /* */
+    'shopperFirstName', /* */
+    'shopperLastName', /* */
+    'shopperPhone', /* */
+    'shopperAddress', /* */
+    'shopperState', /* */
+    'shopperZipcode', /* */
+    'shopperCity', /* */
+    'shopperCountryCode', /* */
+    'shopperBirthDate', /* */
+    'shopperIDNumber', /* */
+    'shopperCompany', /* */
+    'shopperLoyaltyProgram', /* */
+    'affiliateID', /* */
+    'campaignName', /* */
+    'orderID', /* */
+    'orderDescription', /* */
+    'currency', /* */
+    'amount', /* */
+    'orderTotalWithoutShipping', /* */
+    'orderShippingPrice', /* */
+    'orderDiscount', /* */
+    'orderFOLanguage', /* */
+    'orderCartContent', /* */
+    'shippingType', /* */
+    'shippingName', /* */
+    'paymentMethod', /* */
+    'paymentNetwork', /* */
+    'operation', /* */
+    'paymentMode', /* */
+    'secure3d', /* */
+    'offerID', /* */
+    'subscriptionType', /* */
+    'trialPeriod', /* */
+    'rebillAmount', /* */
+    'rebillPeriod', /* */
+    'rebillMaxIteration', /* */
+    'ctrlCustomData', /* */
+    'ctrlRedirectURL', /* */
+    'ctrlCallbackURL', /* */
+    'timeOut', /* */
+    'merchantNotification', /* */
+    'merchantNotificationTo', /* */
+    'merchantNotificationLang', /* */
+    'themeID' /* */
   );
-  protected $fieldsJSON = array(
-      'apiVersion',
-      'shopperID',
-      'shopperEmail',
-      'shipToFirstName',
-      'shipToLastName',
-      'shipToCompany',
-      'shipToPhone',
-      'shipToAddress',
-      'shipToState',
-      'shipToZipcode',
-      'shipToCity',
-      'shipToCountryCode',
-      'shopperFirstName',
-      'shopperLastName',
-      'shopperPhone',
-      'shopperAddress',
-      'shopperState',
-      'shopperZipcode',
-      'shopperCity',
-      'shopperCountryCode',
-      'shopperCompany',
-      'shopperLoyaltyProgram',
-      'orderID',
-      'orderDescription',
-      'currency',
-      'amount',
-      'orderTotalWithoutShipping',
-      'orderShippingPrice',
-      'orderDiscount',
-      'orderFOLanguage',
-      'orderCartContent',
-      'shippingType',
-      'shippingName',
-      'paymentType',
-      'paymentMode',
-      'secure3d',
-      'offerID',
-      'subscriptionType',
-      'trialPeriod',
-      'rebillAmount',
-      'rebillPeriod',
-      'rebillMaxIteration',
-      'ctrlCustomData',
-      'ctrlRedirectURL',
-      'ctrlCallbackURL',
-      'timeOut',
-      'merchantNotification',
-      'merchantNotificationTo',
-      'merchantNotificationLang',
-      'themeID'
-  );
-  private $apiVersion = "002.02";
+  private $apiVersion = self::API_VERSION;
 
   /**
    * URL of the connect2pay application
@@ -310,7 +722,7 @@ class Connect2PayClient {
   /**
    * Merchant unique customer numeric id
    *
-   * @var integer
+   * @var string
    */
   private $shopperID;
   /**
@@ -422,6 +834,18 @@ class Connect2PayClient {
    */
   private $shopperCountryCode;
   /**
+   * Customer birth date YYYYMMDD
+   *
+   * @var string
+   */
+  private $shopperBirthDate;
+  /**
+   * Customer ID number (identity card, passport...)
+   *
+   * @var string
+   */
+  private $shopperIDNumber;
+  /**
    * Customer company name for invoicing
    *
    * @var string
@@ -433,6 +857,21 @@ class Connect2PayClient {
    * @var string
    */
   private $shopperLoyaltyProgram;
+
+  // Affiliation fields
+  /**
+   * Identifier of the affiliate
+   *
+   * @var integer
+   */
+  private $affiliateID;
+
+  /**
+   * Name of the campaign
+   *
+   * @var string
+   */
+  private $campaignName;
 
   // Order Fields
   /**
@@ -511,18 +950,41 @@ class Connect2PayClient {
 
   // Payment Detail Fields
   /**
-   * Can be CreditCard (default) or ToditoCash.
+   * Can be CreditCard, ToditoCash, BankTransfer or empty.
    * This will change the type of the payment page displayed.
+   * If empty, a selection page will be displayed to the customer with payment
+   * types available for the account.
    *
    * @var string
    */
-  private $paymentType;
+  private $paymentMethod;
+
+  /**
+   * The payment netxork to use for the payment.
+   * This can be needed for payment methods other than credit card where several
+   * networks are available and can not be all used in every countries.
+   *
+   * @var string
+   */
+  private $paymentNetwork;
+
+  /**
+   * Can be authorize or sale (default value is according to what is configured
+   * for the account).
+   * This will change the operation done for the payment page.
+   * Only relevant for Credit Card payment type.
+   *
+   * @var string
+   */
+  private $operation;
+
   /**
    * Can be either : Single, OnShipping, Recurrent, InstalmentsPayments
    *
    * @var string
    */
   private $paymentMode;
+
   /**
    * Predefined price point with initial and rebill period (for Recurrent,
    * InstalmentsPayments payment types)
@@ -530,12 +992,14 @@ class Connect2PayClient {
    * @var integer
    */
   private $offerID;
+
   /**
    * Type of subscription.
    *
    * @var string
    */
   private $subscriptionType;
+
   /**
    * Number of days in the initial period (for Recurrent, InstalmentsPayments
    * payment types)
@@ -543,6 +1007,7 @@ class Connect2PayClient {
    * @var integer
    */
   private $trialPeriod;
+
   /**
    * Number in minor unit, amount to be rebilled after the initial period (for
    * Recurrent, InstalmentsPayments payment types)
@@ -550,6 +1015,7 @@ class Connect2PayClient {
    * @var integer
    */
   private $rebillAmount;
+
   /**
    * Number of days next re-billing transaction will be settled in (for
    * Recurrent, InstalmentsPayments payment types)
@@ -557,6 +1023,7 @@ class Connect2PayClient {
    * @var integer
    */
   private $rebillPeriod;
+
   /**
    * Number of re-billing transactions that will be settled (for Recurrent,
    * InstalmentsPayments payment types)
@@ -572,18 +1039,21 @@ class Connect2PayClient {
    * @var string
    */
   private $ctrlRedirectURL;
+
   /**
    * A URL that will be notified of the status of the transaction
    *
    * @var string
    */
   private $ctrlCallbackURL;
+
   /**
    * Custom data that will be returned back with the status of the transaction
    *
    * @var string
    */
   private $ctrlCustomData;
+
   /**
    * Validity for the payment link in ISO 8601 duration format.
    * See http://en.wikipedia.org/wiki/ISO_8601.
@@ -592,6 +1062,7 @@ class Connect2PayClient {
    * @var string
    */
   private $timeOut;
+
   /**
    * Whether or not to send notification to the merchant after payment
    * processing
@@ -599,18 +1070,21 @@ class Connect2PayClient {
    * @var boolean
    */
   private $merchantNotification;
+
   /**
    * Mail address to send merchant notification to
    *
    * @var string
    */
   private $merchantNotificationTo;
+
   /**
    * Lang to use in merchant notification (defaults to the customer lang)
    *
    * @var string
    */
   private $merchantNotificationLang;
+
   /**
    * Select a predefined payment page template
    *
@@ -639,19 +1113,18 @@ class Connect2PayClient {
   // Internal Currency Helper
   private $currencyHelper = null;
 
-  // Path to the certificates file for SSL verification
-  private $sslCAFile = null;
+  // Extra CURL options that can be set by the caller
   private $extraCurlOptions = array();
 
   /**
-   * Instantiate a new connect2pay client
+   * Instantiate a new payment page client
    *
    * @param string $url
-   *          The URL of the connect2pay application
+   *          The URL of the payment page application
    * @param string $merchant
-   *          The login of the merchant on connect2pay
+   *          The login of the merchant on the payment page
    * @param string $password
-   *          The password of the merchant on connect2pay
+   *          The password of the merchant on the payment page
    * @param array $data
    *          Data for the transaction to create (optional)
    */
@@ -695,9 +1168,10 @@ class Connect2PayClient {
    *          The path to the PEM file containing the certification chain.
    *          If not set, defaults to
    *          "_current-dir_/ssl/connect2pay-signing-ca-cert.pem"
+   * @deprecated Has no effect anymore
    */
   public function forceSSLValidation($certFilePath = null) {
-    $this->sslCAFile = ($certFilePath != null) ? $certFilePath : dirname(__FILE__) . "/ssl/connect2pay-signing-ca-cert.pem";
+    Utils::deprecation_error('Custom certificate file path is deprecated. Will use the system CA.');
   }
 
   /**
@@ -708,15 +1182,44 @@ class Connect2PayClient {
   }
 
   /**
-   * Prepare a new transaction on connect2pay application.
-   * This method will validate the transaction data and call
-   * the connect2pay application to create a new transaction.
+   * Get information about the API account.
+   */
+  public function getAccountInformation() {
+    $url = $this->url . self::$API_ROUTES['ACCOUNT_INFO'];
+    $url .= '?apiVersion=' . $this->apiVersion;
+
+    $result = $this->doGet($url, array(), false);
+
+    if ($result !== null && is_object($result)) {
+      $accountInfo = AccountInformation::getFromJson($result);
+
+      if ($accountInfo != null) {
+        return $accountInfo;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   *
+   * @deprecated Use preparePayment() instead.
+   */
+  public function prepareTransaction() {
+    Utils::deprecation_error('Method prepareTransaction() is deprecated, use preparePayment() instead');
+    return $this->preparePayment();
+  }
+
+  /**
+   * Prepare a new payment on the payment page application.
+   * This method will validate the payment data and call
+   * the payment page application to create a new payment.
    * The fields returnCode, returnMessage, merchantToken and
    * customerToken will be populated according to the call result.
    *
    * @return boolean true if creation is successful, false otherwise
    */
-  public function prepareTransaction() {
+  public function preparePayment() {
     if ($this->validate()) {
       $trans = array();
 
@@ -733,43 +1236,298 @@ class Connect2PayClient {
       $result = $this->doPost($url, $post_data);
 
       if ($result != null && is_array($result)) {
-        $this->returnCode = $result["code"];
-        $this->returnMessage = $result["message"];
+        $this->returnCode = $result['code'];
+        $this->returnMessage = $result['message'];
 
         if ($this->returnCode == "200") {
-          $this->merchantToken = $result["merchantToken"];
-          $this->customerToken = $result["customerToken"];
+          $this->merchantToken = $result['merchantToken'];
+          $this->customerToken = $result['customerToken'];
+
           return true;
         } else {
           $this->clientErrorMessage = $this->returnMessage;
         }
       }
-    } else {
-      $this->clientErrorMessage = "The transaction is not valid.";
     }
 
     return false;
   }
 
   /**
-   * Do a transaction status request on the connect2pay application.
    *
-   * @param string $merchantToken
-   *          The merchant token related to this transaction
-   * @return The TransactionStatus object of the transaction or null on error
+   * Get information of a specific transaction.
+   *
+   * @param string $transactionId
+   *          The transaction reference to get status of.
    */
-  public function getTransactionStatus($merchantToken) {
-    if ($merchantToken != null && strlen(trim($merchantToken)) > 0) {
-      $url = $this->url . str_replace(":merchantToken", $merchantToken, Connect2PayClient::$API_ROUTES['TRANS_STATUS']);
+  public function getTransactionInfo($transactionId) {
+    if ($transactionId != null && strlen(trim($transactionId)) > 0) {
+      $url = $this->url . str_replace(":transactionID", $transactionId, Connect2PayClient::$API_ROUTES['TRANS_INFO']);
+      $url .= '?apiVersion=' . $this->apiVersion;
 
       $result = $this->doGet($url, array(), false);
 
-      if ($result != null && is_object($result)) {
-        $this->initStatus($result);
+      if ($result !== null && is_object($result)) {
+        $this->status = TransactionAttempt::getFromJson($result);
+
         if (isset($this->status)) {
           return $this->status;
         }
       }
+    }
+
+    return null;
+  }
+
+  /**
+   *
+   * Export a list of all transactions in a certain date range.
+   *
+   * @param ExportTransactionsRequest $request
+   *          The request containing fields to filter the list of exported transactions
+   *
+   * @return ExportTransactionsResponse The transactions response object
+   */
+  public function exportTransactions($request) {
+    if ($request !== null) {
+      $url = $this->url . Connect2PayClient::$API_ROUTES['TRANS_EXPORT'];
+
+      $request->setApiVersion($this->getApiVersion());
+
+      $result = $this->doGet($url, $request->toParamsArray(), false);
+
+      if ($result != null && is_object($result)) {
+        return ExportTransactionsResponse::getFromJson($result);
+      } else {
+        $this->clientErrorMessage = 'No result received from export transactions call: ' . $this->clientErrorMessage;
+      }
+    } else {
+      $this->clientErrorMessage = '"request" must not be null';
+    }
+
+    return null;
+  }
+
+  /**
+   *
+   * @deprecated Use getPaymentStatus($merchantToken) instead.
+   *
+   * @param string $merchantToken
+   */
+  public function getTransactionStatus($merchantToken) {
+    Utils::deprecation_error('getTransactionStatus is deprecated, use getPaymentStatus instead');
+    return $this->getPaymentStatus($merchantToken);
+  }
+
+  /**
+   * Do a transaction status request on the payment page application.
+   *
+   * @param string $merchantToken
+   *          The merchant token related to this payment
+   * @return PaymentStatus The PaymentStatus object of the payment or null on
+   *         error
+   */
+  public function getPaymentStatus($merchantToken) {
+    if ($merchantToken != null && strlen(trim($merchantToken)) > 0) {
+      $url = $this->url . str_replace(":merchantToken", $merchantToken, Connect2PayClient::$API_ROUTES['PAYMENT_STATUS']);
+      $url .= '?apiVersion=' . $this->apiVersion;
+
+      $result = $this->doGet($url, array(), false);
+
+      if ($result !== null && is_object($result)) {
+        $this->initStatus($result);
+
+        if (isset($this->status)) {
+          return $this->status;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Refund a transaction.
+   *
+   * @param string $transactionID
+   *          Identifier of the transaction to refund
+   * @param int $amount
+   *          The amount to refund
+   * @return RefundStatus The RefundStatus filled with values returned from the
+   *         operation or
+   *         null on failure (in that case call getClientErrorMessage())
+   */
+  public function refundTransaction($transactionID, $amount) {
+    if ($transactionID !== null && $amount !== null && (is_int($amount) || ctype_digit($amount))) {
+      $url = $this->url . str_replace(":transactionID", $transactionID, Connect2PayClient::$API_ROUTES['TRANS_REFUND']);
+      $trans = array();
+      $trans['apiVersion'] = $this->apiVersion;
+      $trans['amount'] = intval($amount);
+
+      $result = $this->doPost($url, json_encode($trans));
+
+      $this->status = null;
+      if ($result != null && is_array($result)) {
+        $this->status = new RefundStatus();
+        if (isset($result['code'])) {
+          $this->status->setCode($result['code']);
+        }
+        if (isset($result['message'])) {
+          $this->status->setMessage($result['message']);
+        }
+        if (isset($result['transactionID'])) {
+          $this->status->setTransactionID($result['transactionID']);
+        }
+        if (isset($result['operation'])) {
+          $this->status->setOperation($result['operation']);
+        }
+
+        return $this->status;
+      } else {
+        $this->clientErrorMessage = 'No result received from refund call';
+      }
+    } else {
+      $this->clientErrorMessage = '"transactionID" must not be null, "amount" must be a positive integer';
+    }
+
+    return null;
+  }
+
+  /**
+   * Rebill a transaction.
+   *
+   * @param string $transactionID
+   *          Identifier of the transaction to rebill
+   * @param int $amount
+   *          The amount to rebill
+   * @return RebillStatus The RebillStatus filled with values returned from the
+   *         operation or
+   *         null on failure (in that case call getClientErrorMessage())
+   */
+  public function rebillTransaction($transactionID, $amount) {
+    if ($transactionID !== null && $amount !== null && (is_int($amount) || ctype_digit($amount))) {
+      $url = $this->url . str_replace(":transactionID", $transactionID, Connect2PayClient::$API_ROUTES['TRANS_REBILL']);
+      $trans = array();
+      $trans['apiVersion'] = $this->apiVersion;
+      $trans['amount'] = intval($amount);
+
+      $result = $this->doPost($url, json_encode($trans));
+
+      $this->status = null;
+      if ($result != null && is_array($result)) {
+        $this->status = new RebillStatus();
+        if (isset($result['code'])) {
+          $this->status->setCode($result['code']);
+        }
+        if (isset($result['message'])) {
+          $this->status->setMessage($result['message']);
+        }
+        if (isset($result['transactionID'])) {
+          $this->status->setTransactionID($result['transactionID']);
+        }
+        if (isset($result['operation'])) {
+          $this->status->setOperation($result['operation']);
+        }
+
+        return $this->status;
+      } else {
+        $this->clientErrorMessage = 'No result received from rebill call: ' . $this->clientErrorMessage;
+      }
+    } else {
+      $this->clientErrorMessage = '"transactionID" must not be null, "amount" must be a positive integer';
+    }
+
+    return null;
+  }
+
+  /**
+   * Cancel a transaction.
+   *
+   * @param string $transactionID
+   *          Identifier of the transaction to cancel
+   * @param int $amount
+   *          The amount to cancel
+   * @return CancelStatus The CancelStatus filled with values returned from the
+   *         operation or
+   *         null on failure (in that case call getClientErrorMessage())
+   */
+  public function cancelTransaction($transactionID, $amount) {
+    if ($transactionID !== null && $amount !== null && (is_int($amount) || ctype_digit($amount))) {
+      $url = $this->url . str_replace(":transactionID", $transactionID, Connect2PayClient::$API_ROUTES['TRANS_CANCEL']);
+      $trans = array();
+      $trans['apiVersion'] = $this->apiVersion;
+      $trans['amount'] = intval($amount);
+
+      $result = $this->doPost($url, json_encode($trans));
+
+      $this->status = null;
+      if ($result != null && is_array($result)) {
+        $this->status = new CancelStatus();
+        if (isset($result['code'])) {
+          $this->status->setCode($result['code']);
+        }
+        if (isset($result['message'])) {
+          $this->status->setMessage($result['message']);
+        }
+        if (isset($result['transactionID'])) {
+          $this->status->setTransactionID($result['transactionID']);
+        }
+        if (isset($result['operation'])) {
+          $this->status->setOperation($result['operation']);
+        }
+
+        return $this->status;
+      } else {
+        $this->clientErrorMessage = 'No result received from cancel call: ' . $this->clientErrorMessage;
+      }
+    } else {
+      $this->clientErrorMessage = '"transactionID" must not be null, "amount" must be a positive integer';
+    }
+
+    return null;
+  }
+
+  /**
+   * Capture a transaction.
+   *
+   * @param string $transactionID
+   *          Identifier of the transaction to capture
+   * @param int $amount
+   *          The amount to capture, must be lower or equal to the authorized amount
+   * @return CaptureStatus The CaptureStatus filled with values returned from the
+   *         operation or null on failure (in that case call getClientErrorMessage())
+   */
+  public function captureTransaction($transactionID, $amount) {
+    if ($transactionID !== null && $amount !== null && (is_int($amount) || ctype_digit($amount))) {
+      $url = $this->url . str_replace(":transactionID", $transactionID, Connect2PayClient::$API_ROUTES['TRANS_CAPTURE']);
+      $trans = array();
+      $trans['apiVersion'] = $this->apiVersion;
+      $trans['amount'] = intval($amount);
+
+      $result = $this->doPost($url, json_encode($trans));
+
+      $this->status = null;
+      if ($result != null && is_array($result)) {
+        $this->status = new CaptureStatus();
+        if (isset($result['code'])) {
+          $this->status->setCode($result['code']);
+        }
+        if (isset($result['message'])) {
+          $this->status->setMessage($result['message']);
+        }
+        if (isset($result['transactionID'])) {
+          $this->status->setTransactionID($result['transactionID']);
+        }
+        if (isset($result['operation'])) {
+          $this->status->setOperation($result['operation']);
+        }
+
+        return $this->status;
+      } else {
+        $this->clientErrorMessage = 'No result received from capture call: ' . $this->clientErrorMessage;
+      }
+    } else {
+      $this->clientErrorMessage = '"transactionID" must not be null, "amount" must be a positive integer';
     }
 
     return null;
@@ -783,36 +1541,109 @@ class Connect2PayClient {
    * @param int $cancelReason
    *          Identifier of the cancelReason (see _SUBSCRIPTION_CANCEL_*
    *          constants)
-   * @return The result code of the operation (200 for success) or null on
+   * @return string The result code of the operation (200 for success) or null
+   *         on
    *         failure
    */
   public function cancelSubscription($subscriptionID, $cancelReason) {
     if ($subscriptionID != null && is_numeric($subscriptionID) && isset($cancelReason) && is_numeric($cancelReason)) {
       $url = $this->url . str_replace(":subscriptionID", $subscriptionID, Connect2PayClient::$API_ROUTES['SUB_CANCEL']);
       $trans = array();
-      $trans["apiVersion"] = $this->apiVersion;
-      $trans["cancelReason"] = intval($cancelReason);
+      $trans['apiVersion'] = $this->apiVersion;
+      $trans['cancelReason'] = intval($cancelReason);
 
       $result = $this->doPost($url, json_encode($trans));
 
       if ($result != null && is_array($result)) {
-        $this->clientErrorMessage = $result["message"];
-        return $result["code"];
+        $this->clientErrorMessage = $result['message'];
+        return $result['code'];
       }
     } else {
-      $this->clientErrorMessage = "subscriptionID and cancelReason must be not null and numeric";
+      $this->clientErrorMessage = 'subscriptionID and cancelReason must be not null and numeric';
     }
 
     return null;
   }
 
   /**
-   * Handle the callback done by the connect2pay application after
+   * Direct WeChat transaction process.
+   * Must be preceded by a payment prepare call.
+   *
+   * @param string $customerToken
+   *          Customer token of the payment returned by the previous prepare
+   *          call
+   * @param WeChatDirectProcessRequest $request
+   *          The WeChatDirectProcessRequest object with call parameters
+   * @return WeChatDirectProcessResponse The WeChatDirectProcessResponse filled
+   *         with values returned from the
+   *         operation or null on failure (in that case call
+   *         getClientErrorMessage())
+   */
+  public function directWeChatProcess($customerToken, $request) {
+    if ($customerToken !== null && $request !== null) {
+      $url = $this->url . str_replace(":customerToken", $customerToken, Connect2PayClient::$API_ROUTES['WECHAT_DIRECT_PROCESS']);
+
+      $request->setApiVersion($this->getApiVersion());
+
+      $result = $this->doPost($url, json_encode($request), false);
+
+      if ($result != null && is_object($result)) {
+        $apiResponse = WeChatDirectProcessResponse::getFromJson($result);
+
+        return $apiResponse;
+      } else {
+        $this->clientErrorMessage = 'No result received from direct WeChat processing call: ' . $this->clientErrorMessage;
+      }
+    } else {
+      $this->clientErrorMessage = '"customerToken" and "request" must not be null';
+    }
+
+    return null;
+  }
+
+  /**
+   * Direct AliPay transaction process.
+   * Must be preceded by a payment prepare call.
+   *
+   * @param string $customerToken
+   *          Customer token of the payment returned by the previous prepare
+   *          call
+   * @param AliPayDirectProcessRequest $request
+   *          The AliPayDirectProcessRequest object with call parameters
+   * @return AliPayDirectProcessResponse The AliPayDirectProcessResponse filled
+   *         with values returned from the
+   *         operation or null on failure (in that case call
+   *         getClientErrorMessage())
+   */
+  public function directAliPayProcess($customerToken, $request) {
+    if ($customerToken !== null && $request !== null) {
+      $url = $this->url . str_replace(":customerToken", $customerToken, Connect2PayClient::$API_ROUTES['ALIPAY_DIRECT_PROCESS']);
+
+      $request->setApiVersion($this->getApiVersion());
+
+      $result = $this->doPost($url, json_encode($request), false);
+
+      if ($result != null && is_object($result)) {
+        $apiResponse = AliPayDirectProcessResponse::getFromJson($result);
+
+        return $apiResponse;
+      } else {
+        $this->clientErrorMessage = 'No result received from direct AliPay processing call: ' . $this->clientErrorMessage;
+      }
+    } else {
+      $this->clientErrorMessage = '"customerToken" and "request" must not be null';
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle the callback done by the payment page application after
    * a transaction processing.
    * This will populate the status field that can be retrieved by calling
    * getStatus().
    *
-   * @return true on succes or false on error
+   * @return true on success or false on error
    */
   public function handleCallbackStatus() {
     // Read the body of the request
@@ -823,6 +1654,7 @@ class Connect2PayClient {
 
       if ($status != null && is_object($status)) {
         $this->initStatus($status);
+
         return true;
       }
     }
@@ -831,7 +1663,7 @@ class Connect2PayClient {
   }
 
   /**
-   * Handle the data received by the POST done when connect2pay redirects
+   * Handle the data received by the POST done when payment page redirects
    * the customer to the merchant website.
    * This will populate the status field that can be retrieved by calling
    * getStatus().
@@ -847,15 +1679,22 @@ class Connect2PayClient {
     $binData = $this->urlsafe_base64_decode($encryptedData);
 
     // Decrypting
-    $json = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, $key, $binData, MCRYPT_MODE_ECB);
+    $cipher = "aes-128-ecb";
+    $json = null;
+    if (function_exists('openssl_decrypt') && in_array($cipher, openssl_get_cipher_methods())) {
+      $json = openssl_decrypt($binData, $cipher, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+    } else {
+      $this->clientErrorMessage = 'OpenSSL functions are needed to operate properly.';
+    }
 
-    if ($json) {
+    if ($json !== null && $json !== false) {
       // Remove PKCS#5 padding
       $json = $this->pkcs5_unpad($json);
       $status = json_decode($json, false);
 
       if ($status != null && is_object($status)) {
         $this->initStatus($status);
+
         return true;
       }
     }
@@ -919,23 +1758,17 @@ class Connect2PayClient {
       // In that case, $data is the body of the request
       curl_setopt($curl, CURLOPT_POST, true);
       curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+      curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
     } else {
       $this->clientErrorMessage = "Bad HTTP method specified.";
       return null;
     }
 
+    curl_setopt($curl, CURLOPT_USERAGENT, "PayXpert PHP C2P API Client/" . self::CLIENT_VERSION);
     curl_setopt($curl, CURLOPT_URL, $url);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
     curl_setopt($curl, CURLOPT_USERPWD, $this->merchant . ":" . $this->password);
-
-    if ($this->sslCAFile != null) {
-      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
-      curl_setopt($curl, CURLOPT_CAINFO, $this->sslCAFile);
-      curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
-    } else {
-      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-    }
 
     if ($this->proxy_host != null && $this->proxy_port != null) {
       curl_setopt($curl, CURLOPT_PROXY, $this->proxy_host);
@@ -957,7 +1790,7 @@ class Connect2PayClient {
     curl_close($curl);
 
     if ($httpCode != 200) {
-      $this->clientErrorMessage = "Received HTTP code " . $httpCode . " from connect2pay.";
+      $this->clientErrorMessage = "Received HTTP code " . $httpCode . " from payment page.";
     } else {
       if ($json !== false) {
         $result = json_decode($json, $assoc);
@@ -965,10 +1798,10 @@ class Connect2PayClient {
         if ($result != null) {
           return $result;
         } else {
-          $this->clientErrorMessage = "JSON decoding error.";
+          $this->clientErrorMessage = 'JSON decoding error.';
         }
       } else {
-        $this->clientErrorMessage = "Error requesting " . $connect2pay;
+        $this->clientErrorMessage = 'Error requesting ' . $connect2pay;
       }
     }
 
@@ -976,17 +1809,7 @@ class Connect2PayClient {
   }
 
   private function initStatus($status) {
-    if ($status != null && is_object($status)) {
-      $this->status = new TransactionStatus();
-      $reflector = new ReflectionClass('TransactionStatus');
-      $properties = $reflector->getProperties();
-
-      foreach ($properties as $property) {
-        if (isset($status->{$property->getName()})) {
-          $this->status->{"set" . ucfirst($property->getName())}($status->{$property->getName()});
-        }
-      }
-    }
+    $this->status = PaymentStatus::getFromJson($status);
   }
 
   private function urlsafe_base64_decode($string) {
@@ -1073,7 +1896,7 @@ class Connect2PayClient {
   }
 
   public function setShopperID($shopperID) {
-    $this->shopperID = (int) $shopperID;
+    $this->shopperID = (strlen($shopperID) > 32) ? substr((string) $shopperID, 0, 32) : (string) $shopperID;
     return ($this);
   }
 
@@ -1177,7 +2000,7 @@ class Connect2PayClient {
   }
 
   public function getShopperLastName() {
-    return (!C2PValidate::isEmpty($this->shopperLastName)) ? $this->shopperLastName : Connect2PayClient::_UNAVAILABLE;
+    return (!C2PValidate::isEmpty($this->shopperLastName)) ? $this->shopperLastName : Connect2PayClient::UNAVAILABLE;
   }
 
   public function setShopperLastName($shopperLastName) {
@@ -1186,7 +2009,7 @@ class Connect2PayClient {
   }
 
   public function getShopperPhone() {
-    return (!C2PValidate::isEmpty($this->shopperPhone)) ? $this->shopperPhone : Connect2PayClient::_UNAVAILABLE;
+    return (!C2PValidate::isEmpty($this->shopperPhone)) ? $this->shopperPhone : Connect2PayClient::UNAVAILABLE;
   }
 
   public function setShopperPhone($shopperPhone) {
@@ -1195,7 +2018,7 @@ class Connect2PayClient {
   }
 
   public function getShopperAddress() {
-    return (!C2PValidate::isEmpty($this->shopperAddress)) ? $this->shopperAddress : Connect2PayClient::_UNAVAILABLE;
+    return (!C2PValidate::isEmpty($this->shopperAddress)) ? $this->shopperAddress : Connect2PayClient::UNAVAILABLE;
   }
 
   public function setShopperAddress($shopperAddress) {
@@ -1204,7 +2027,7 @@ class Connect2PayClient {
   }
 
   public function getShopperState() {
-    return (!C2PValidate::isEmpty($this->shopperState)) ? $this->shopperState : Connect2PayClient::_UNAVAILABLE;
+    return (!C2PValidate::isEmpty($this->shopperState)) ? $this->shopperState : Connect2PayClient::UNAVAILABLE;
   }
 
   public function setShopperState($shopperState) {
@@ -1213,7 +2036,7 @@ class Connect2PayClient {
   }
 
   public function getShopperZipcode() {
-    return (!C2PValidate::isEmpty($this->shopperZipcode)) ? $this->shopperZipcode : Connect2PayClient::_UNAVAILABLE;
+    return (!C2PValidate::isEmpty($this->shopperZipcode)) ? $this->shopperZipcode : Connect2PayClient::UNAVAILABLE;
   }
 
   public function setShopperZipcode($shopperZipcode) {
@@ -1222,7 +2045,7 @@ class Connect2PayClient {
   }
 
   public function getShopperCity() {
-    return (!C2PValidate::isEmpty($this->shopperCity)) ? $this->shopperCity : Connect2PayClient::_UNAVAILABLE;
+    return (!C2PValidate::isEmpty($this->shopperCity)) ? $this->shopperCity : Connect2PayClient::UNAVAILABLE;
   }
 
   public function setShopperCity($shopperCity) {
@@ -1231,11 +2054,29 @@ class Connect2PayClient {
   }
 
   public function getShopperCountryCode() {
-    return (!C2PValidate::isEmpty($this->shopperCountryCode)) ? $this->shopperCountryCode : Connect2PayClient::_UNAVAILABLE_COUNTRY;
+    return (!C2PValidate::isEmpty($this->shopperCountryCode)) ? $this->shopperCountryCode : Connect2PayClient::UNAVAILABLE_COUNTRY;
   }
 
   public function setShopperCountryCode($shopperCountryCode) {
     $this->shopperCountryCode = (strlen($shopperCountryCode) > 2) ? substr((string) $shopperCountryCode, 0, 2) : (string) $shopperCountryCode;
+    return ($this);
+  }
+
+  public function getShopperBirthDate() {
+    return $this->shopperBirthDate;
+  }
+
+  public function setShopperBirthDate($shopperBirthDate) {
+    $this->shopperBirthDate = (strlen($shopperBirthDate) > 8) ? substr((string) $shopperBirthDate, 0, 8) : (string) $shopperBirthDate;
+    return ($this);
+  }
+
+  public function getShopperIDNumber() {
+    return $this->shopperIDNumber;
+  }
+
+  public function setShopperIDNumber($shopperIDNumber) {
+    $this->shopperIDNumber = (strlen($shopperIDNumber) > 32) ? substr((string) $shopperIDNumber, 0, 32) : (string) $shopperIDNumber;
     return ($this);
   }
 
@@ -1254,6 +2095,24 @@ class Connect2PayClient {
 
   public function setShopperLoyaltyProgram($shopperLoyaltyProgram) {
     $this->shopperLoyaltyProgram = (string) $shopperLoyaltyProgram;
+    return ($this);
+  }
+
+  public function getAffiliateID() {
+    return $this->affiliateID;
+  }
+
+  public function setAffiliateID($affiliateID) {
+    $this->affiliateID = (strlen($affiliateID) > 16) ? substr($affiliateID, 0, 16) : $affiliateID;
+    return ($this);
+  }
+
+  public function getCampaignName() {
+    return $this->campaignName;
+  }
+
+  public function setCampaignName($campaignName) {
+    $this->campaignName = (strlen($campaignName) > 128) ? substr($campaignName, 0, 128) : $campaignName;
     return ($this);
   }
 
@@ -1393,12 +2252,66 @@ class Connect2PayClient {
     return ($this);
   }
 
+  /**
+   *
+   * @deprecated
+   */
   public function getPaymentType() {
-    return (!C2PValidate::isEmpty($this->paymentType)) ? $this->paymentType : Connect2PayClient::_PAYMENT_TYPE_CREDITCARD;
+    Utils::deprecation_error('Use getPaymentMethod().');
+    return $this->getPaymentMethod();
   }
 
+  /**
+   *
+   * @deprecated
+   */
   public function setPaymentType($paymentType) {
-    $this->paymentType = (string) $paymentType;
+    Utils::deprecation_error('Use setPaymentMethod().');
+    return ($this->setPaymentMethod($paymentType));
+  }
+
+  public function getPaymentMethod() {
+    return (!C2PValidate::isEmpty($this->paymentMethod)) ? $this->paymentMethod : Connect2PayClient::PAYMENT_METHOD_CREDITCARD;
+  }
+
+  public function setPaymentMethod($paymentMethod) {
+    $this->paymentMethod = (string) $paymentMethod;
+    return ($this);
+  }
+
+  /**
+   *
+   * @deprecated
+   */
+  public function getProvider() {
+    Utils::deprecation_error('Use getPaymentNetwork().');
+    return $this->getPaymentNetwork();
+  }
+
+  /**
+   *
+   * @deprecated
+   */
+  public function setProvider($provider) {
+    Utils::deprecation_error('Use setPaymentNetwork().');
+    return $this->setPaymentNetwork($provider);
+  }
+
+  public function getPaymentNetwork() {
+    return $this->paymentNetwork;
+  }
+
+  public function setPaymentNetwork($paymentNetwork) {
+    $this->paymentNetwork = $paymentNetwork;
+    return $this;
+  }
+
+  public function getOperation() {
+    return $this->operation;
+  }
+
+  public function setOperation($operation) {
+    $this->operation = (string) $operation;
     return ($this);
   }
 
@@ -1597,20 +2510,17 @@ class Connect2PayClient {
     $returnError = array();
 
     foreach ($fieldsRequired as $field) {
-      if (C2PValidate::isEmpty($this->{$field}) and (!is_numeric($this->{$field})))
+      if (C2PValidate::isEmpty($this->{$field}) && (!is_numeric($this->{$field})))
         $returnError[] = $field . ' is empty';
     }
 
     foreach ($this->fieldsSize as $field => $size) {
-      if (isset($this->{$field}) and C2PValidate::strlen($this->{$field}) > $size)
+      if (isset($this->{$field}) && C2PValidate::strlen($this->{$field}) > $size)
         $returnError[] = $field . ' Length ' . $size;
     }
 
     foreach ($this->fieldsValidate as $field => $method) {
-      if (!C2PValidate::isEmpty($this->{$field}) and !call_user_func(array(
-          'C2PValidate',
-          $method
-      ), $this->{$field}))
+      if (!C2PValidate::isEmpty($this->{$field}) && !call_user_func(array('PayXpert\Connect2Pay\C2PValidate', $method), $this->{$field}))
         $returnError[] = $field . ' = ' . $this->{$field};
     }
 
@@ -1618,168 +2528,492 @@ class Connect2PayClient {
   }
 }
 
+class Container {
+
+  protected static function copyScalarProperties($properties, $src, &$dest) {
+    if ($properties !== null && is_object($src) && is_object($dest)) {
+      foreach ($properties as $property) {
+        if (isset($src->{$property->getName()}) && is_scalar($src->{$property->getName()})) {
+          $dest->{"set" . ucfirst($property->getName())}($src->{$property->getName()});
+        }
+      }
+    }
+  }
+}
+
 /**
- *
- * Represent the status of a transaction returned by the payment page
- *
- * @author jsh <jsh@payxpert.com>
- *
+ * Contains the information returned by the account information API call
  */
-class TransactionStatus {
+class AccountInformation extends Container {
   /**
-   * Status of the transaction: "Authorized", "Not authorized", "Expired", "Call
-   * failed" or "Not processed"
+   * API version of the response
+   *
+   * @var string
+   */
+  private $apiVersion;
+
+  /**
+   * The displayed name of the account
+   *
+   * @var string
+   */
+  private $name;
+
+  /**
+   * Indicates if Terms and conditions must be acknowledged on the payment page
+   * by the shopper
+   *
+   * @var boolean
+   */
+  private $displayTerms;
+
+  /**
+   * Terms and conditions URL
+   *
+   * @var string
+   */
+  private $termsUrl;
+
+  /**
+   * URL of customer support
+   *
+   * @var string
+   */
+  private $supportUrl;
+
+  /**
+   * The number of attempts allowed to process the payment in case of failure
+   *
+   * @var integer
+   */
+  private $maxAttempts;
+
+  /**
+   * Name displayed in customers notification emails
+   *
+   * @var string
+   */
+  private $notificationSenderName;
+
+  /**
+   * Email displayed in customers notification emails
+   *
+   * @var string
+   */
+  private $notificationSenderEmail;
+
+  /**
+   * Indicates if a notification is sent to the shopper in case of payment
+   * success
+   *
+   * @var boolean
+   */
+  private $notificationOnSuccess;
+
+  /**
+   * Indicates if a notification is sent to the shopper in case of payment
+   * failure
+   *
+   * @var boolean
+   */
+  private $notificationOnFailure;
+
+  /**
+   * Indicates if a notification is sent to the merchant after a payment
+   *
+   * @var boolean
+   */
+  private $merchantNotification;
+
+  /**
+   * Email used to send merchant notification
+   *
+   * @var string
+   */
+  private $merchantNotificationTo;
+
+  /**
+   * The language used in merchant email notification (ISO-639 two letters code)
+   *
+   * @var string
+   */
+  private $merchantNotificationLang;
+
+  /**
+   * A list of payment methods available for the account
+   *
+   * @var PaymentMethodInformation[]
+   */
+  private $paymentMethods;
+
+  public function getApiVersion() {
+    return $this->apiVersion;
+  }
+
+  public function setApiVersion($apiVersion) {
+    $this->apiVersion = $apiVersion;
+    return $this;
+  }
+
+  public function getName() {
+    return $this->name;
+  }
+
+  public function setName($name) {
+    $this->name = $name;
+    return $this;
+  }
+
+  public function getDisplayTerms() {
+    return $this->displayTerms;
+  }
+
+  public function setDisplayTerms($displayTerms) {
+    $this->displayTerms = $displayTerms;
+    return $this;
+  }
+
+  public function getTermsUrl() {
+    return $this->termsUrl;
+  }
+
+  public function setTermsUrl($termsUrl) {
+    $this->termsUrl = $termsUrl;
+    return $this;
+  }
+
+  public function getSupportUrl() {
+    return $this->supportUrl;
+  }
+
+  public function setSupportUrl($supportUrl) {
+    $this->supportUrl = $supportUrl;
+    return $this;
+  }
+
+  public function getMaxAttempts() {
+    return $this->maxAttempts;
+  }
+
+  public function setMaxAttempts($maxAttempts) {
+    $this->maxAttempts = $maxAttempts;
+    return $this;
+  }
+
+  public function getNotificationSenderName() {
+    return $this->notificationSenderName;
+  }
+
+  public function setNotificationSenderName($notificationSenderName) {
+    $this->notificationSenderName = $notificationSenderName;
+    return $this;
+  }
+
+  public function getNotificationSenderEmail() {
+    return $this->notificationSenderEmail;
+  }
+
+  public function setNotificationSenderEmail($notificationSenderEmail) {
+    $this->notificationSenderEmail = $notificationSenderEmail;
+    return $this;
+  }
+
+  public function getNotificationOnSuccess() {
+    return $this->notificationOnSuccess;
+  }
+
+  public function setNotificationOnSuccess($notificationOnSuccess) {
+    $this->notificationOnSuccess = $notificationOnSuccess;
+    return $this;
+  }
+
+  public function getNotificationOnFailure() {
+    return $this->notificationOnFailure;
+  }
+
+  public function setNotificationOnFailure($notificationOnFailure) {
+    $this->notificationOnFailure = $notificationOnFailure;
+    return $this;
+  }
+
+  public function getMerchantNotification() {
+    return $this->merchantNotification;
+  }
+
+  public function setMerchantNotification($merchantNotification) {
+    $this->merchantNotification = $merchantNotification;
+    return $this;
+  }
+
+  public function getMerchantNotificationTo() {
+    return $this->merchantNotificationTo;
+  }
+
+  public function setMerchantNotificationTo($merchantNotificationTo) {
+    $this->merchantNotificationTo = $merchantNotificationTo;
+    return $this;
+  }
+
+  public function getMerchantNotificationLang() {
+    return $this->merchantNotificationLang;
+  }
+
+  public function setMerchantNotificationLang($merchantNotificationLang) {
+    $this->merchantNotificationLang = $merchantNotificationLang;
+    return $this;
+  }
+
+  public function getPaymentMethods() {
+    return $this->paymentMethods;
+  }
+
+  public function setPaymentMethods($paymentMethods) {
+    $this->paymentMethods = $paymentMethods;
+    return $this;
+  }
+
+  public static function getFromJson($infoJson) {
+    $accountInfo = null;
+
+    if ($infoJson != null && is_object($infoJson)) {
+      // Root element, AccountInformation
+      $accountInfo = new AccountInformation();
+      $reflector = new \ReflectionClass('PayXpert\Connect2Pay\AccountInformation');
+      self::copyScalarProperties($reflector->getProperties(), $infoJson, $accountInfo);
+
+      // Payment Method Information
+      if (isset($infoJson->paymentMethods) && is_array($infoJson->paymentMethods)) {
+        $paymentMethods = array();
+
+        foreach ($infoJson->paymentMethods as $paymentMethod) {
+          $pmi = new PaymentMethodInformation();
+          $reflector = new \ReflectionClass('PayXpert\Connect2Pay\PaymentMethodInformation');
+          self::copyScalarProperties($reflector->getProperties(), $paymentMethod, $pmi);
+
+          // Currencies array
+          if (isset($paymentMethod->currencies) && is_array($paymentMethod->currencies)) {
+            $pmi->setCurrencies($paymentMethod->currencies);
+          }
+
+          // Payment Method Options
+          if (isset($paymentMethod->options) && is_array($paymentMethod->options)) {
+            $paymentMethodOptions = array();
+
+            foreach ($paymentMethod->options as $option) {
+              $pmo = new PaymentMethodOption();
+              $reflector = new \ReflectionClass('PayXpert\Connect2Pay\PaymentMethodOption');
+              self::copyScalarProperties($reflector->getProperties(), $option, $pmo);
+
+              $paymentMethodOptions[] = $pmo;
+            }
+
+            $pmi->setOptions($paymentMethodOptions);
+          }
+
+          $paymentMethods[] = $pmi;
+        }
+
+        $accountInfo->setPaymentMethods($paymentMethods);
+      }
+    }
+
+    return $accountInfo;
+  }
+}
+
+class PaymentMethodInformation {
+  /**
+   * The payment method
+   *
+   * @var string
+   */
+  private $paymentMethod;
+
+  /**
+   * The payment network
+   *
+   * @var string
+   */
+  private $paymentNetwork;
+
+  /**
+   * A list of ISO 4217 currency code for which this payment method is enabled
+   *
+   * @var string[]
+   */
+  private $currencies;
+
+  /**
+   * The operation that will be executed by default when processing this type of
+   * method.
+   * Can be sale, authorize or collection
+   *
+   * @var string
+   */
+  private $defaultOperation;
+
+  /**
+   * A list of payment method specific option
+   *
+   * @var PaymentMethodOption[]
+   */
+  private $options;
+
+  public function getPaymentMethod() {
+    return $this->paymentMethod;
+  }
+
+  public function setPaymentMethod($paymentMethod) {
+    $this->paymentMethod = $paymentMethod;
+    return $this;
+  }
+
+  public function getPaymentNetwork() {
+    return $this->paymentNetwork;
+  }
+
+  public function setPaymentNetwork($paymentNetwork) {
+    $this->paymentNetwork = $paymentNetwork;
+    return $this;
+  }
+
+  public function getCurrencies() {
+    return $this->currencies;
+  }
+
+  public function setCurrencies($currencies) {
+    $this->currencies = $currencies;
+    return $this;
+  }
+
+  public function getDefaultOperation() {
+    return $this->defaultOperation;
+  }
+
+  public function setDefaultOperation($defaultOperation) {
+    $this->defaultOperation = $defaultOperation;
+    return $this;
+  }
+
+  public function getOptions() {
+    return $this->options;
+  }
+
+  public function setOptions($options) {
+    $this->options = $options;
+    return $this;
+  }
+}
+
+class PaymentMethodOption {
+  /**
+   * The name of the option
+   *
+   * @var string
+   */
+  private $name;
+
+  /**
+   * The value of the option
+   *
+   * @var string
+   */
+  private $value;
+
+  public function getName() {
+    return $this->name;
+  }
+
+  public function setName($name) {
+    $this->name = $name;
+    return $this;
+  }
+
+  public function getValue() {
+    return $this->value;
+  }
+
+  public function setValue($value) {
+    $this->value = $value;
+    return $this;
+  }
+}
+
+/**
+ * Represent the status of a payment returned by the payment page
+ */
+class PaymentStatus extends Container {
+  /**
+   * Status of the payment: "Authorized", "Not authorized", "Expired", "Call
+   * failed", "Pending" or "Not processed"
    *
    * @var String
    */
   private $status;
 
   /**
-   * The merchant token of this transaction
+   * The merchant token of this payment
    *
    * @var String
    */
   private $merchantToken;
 
   /**
-   * Transaction ID of this transaction.
-   *
-   * @var Int
-   */
-  private $transactionID;
-
-  /**
-   * ID of the subscription this transaction is part of (if any).
-   *
-   * @var Int
-   */
-  private $subscriptionID;
-
-  /**
-   * Type of payment for that transaction: CreditCard or ToditoCash
+   * Type of operation for the last transaction done for this payment: Can be
+   * sale or authorize.
    *
    * @var String
    */
-  private $paymentType;
+  private $operation;
 
   /**
-   * Details of the payment mean used to process the transaction
-   *
-   * @var Depends on the paymentType
-   */
-  private $paymentMeanInfo;
-
-  /**
-   * Result code of the transaction returned by the Payment Gateway
+   * Result code of the last transaction done for this payment
    *
    * @var Int
    */
   private $errorCode;
 
   /**
-   * Error message corresponding to the error code
+   * Error message of the last transaction done for this payment
    *
    * @var String
    */
   private $errorMessage;
 
   /**
-   * Statement descriptor returned by the Payment Gateway
-   *
-   * @var unknown_type
-   */
-  private $statementDescriptor;
-
-  /**
-   * The order ID of the transaction.
+   * The order ID of the payment
    *
    * @var String
    */
   private $orderID;
 
   /**
-   * Currency for the transaction.
+   * Currency for the payment
    *
    * @var String
    */
   private $currency;
 
   /**
-   * Amount of the transaction in cents (1.00€ => 100)
+   * Amount of the payment in cents (1.00€ => 100)
    *
    * @var Int
    */
   private $amount;
 
   /**
-   * Name provided by the shopper
-   *
-   * @var String
-   */
-  private $shopperName;
-
-  /**
-   * Address provided by the shopper
-   *
-   * @var String
-   */
-  private $shopperAddress;
-
-  /**
-   * Zipcode provided by the shopper.
-   *
-   * @var String
-   */
-  private $shopperZipcode;
-
-  /**
-   * City provided by the shopper.
-   *
-   * @var String
-   */
-  private $shopperCity;
-
-  /**
-   * State provided by the shopper
-   *
-   * @var String
-   */
-  private $shopperState;
-
-  /**
-   * Country provided by the shopper.
-   *
-   * @var String
-   */
-  private $shopperCountryCode;
-
-  /**
-   * Phone provided by the shopper
-   *
-   * @var String
-   */
-  private $shopperPhone;
-
-  /**
-   * Email address provided by the shopper.
-   *
-   * @var String
-   */
-  private $shopperEmail;
-
-  /**
-   * IP address of the shopper
-   *
-   * @var String
-   */
-  private $shopperIPAddress;
-
-  /**
-   * Custom data provided by merchant at transaction creation.
+   * Custom data provided by merchant at payment creation.
    *
    * @var String
    */
   private $ctrlCustomData;
+
+  /**
+   * The list of transactions done to complete this payment
+   *
+   * @var array
+   */
+  private $transactions;
 
   public function getStatus() {
     return $this->status;
@@ -1799,39 +3033,12 @@ class TransactionStatus {
     return $this;
   }
 
-  public function getTransactionID() {
-    return $this->transactionID;
+  public function getOperation() {
+    return $this->operation;
   }
 
-  public function setTransactionID($transactionID) {
-    $this->transactionID = $transactionID;
-    return $this;
-  }
-
-  public function getSubscriptionID() {
-    return $this->subscriptionID;
-  }
-
-  public function setSubscriptionID($subscriptionID) {
-    $this->subscriptionID = $subscriptionID;
-    return $this;
-  }
-
-  public function getPaymentType() {
-    return $this->paymentType;
-  }
-
-  public function setPaymentType($paymentType) {
-    $this->paymentType = $paymentType;
-    return $this;
-  }
-
-  public function getPaymentMeanInfo() {
-    return $this->paymentMeanInfo;
-  }
-
-  public function setPaymentMeanInfo($paymentMeanInfo) {
-    $this->paymentMeanInfo = $paymentMeanInfo;
+  public function setOperation($operation) {
+    $this->operation = $operation;
     return $this;
   }
 
@@ -1850,15 +3057,6 @@ class TransactionStatus {
 
   public function setErrorMessage($errorMessage) {
     $this->errorMessage = $errorMessage;
-    return $this;
-  }
-
-  public function getStatementDescriptor() {
-    return $this->statementDescriptor;
-  }
-
-  public function setStatementDescriptor($statementDescriptor) {
-    $this->statementDescriptor = $statementDescriptor;
     return $this;
   }
 
@@ -1889,101 +3087,6 @@ class TransactionStatus {
     return $this;
   }
 
-  public function getShopperName() {
-    return $this->shopperName;
-  }
-
-  public function setShopperName($shopperName) {
-    $this->shopperName = $shopperName;
-    return $this;
-  }
-
-  public function getShopperAddress() {
-    return $this->shopperAddress;
-  }
-
-  public function setShopperAddress($shopperAddress) {
-    $this->shopperAddress = $shopperAddress;
-    return $this;
-  }
-
-  public function getShopperZipcode() {
-    return $this->shopperZipcode;
-  }
-
-  public function setShopperZipcode($shopperZipcode) {
-    $this->shopperZipcode = $shopperZipcode;
-    return $this;
-  }
-
-  public function getShopperCity() {
-    return $this->shopperCity;
-  }
-
-  public function setShopperCity($shopperCity) {
-    $this->shopperCity = $shopperCity;
-    return $this;
-  }
-
-  public function getShopperState() {
-    return $this->shopperState;
-  }
-
-  public function setShopperState($shopperState) {
-    $this->shopperState = $shopperState;
-    return $this;
-  }
-
-  public function getShopperCountryCode() {
-    return $this->shopperCountryCode;
-  }
-
-  public function setShopperCountryCode($shopperCountryCode) {
-    $this->shopperCountryCode = $shopperCountryCode;
-    return $this;
-  }
-
-  public function getShopperPhone() {
-    return $this->shopperPhone;
-  }
-
-  public function setShopperPhone($shopperPhone) {
-    $this->shopperPhone = $shopperPhone;
-    return $this;
-  }
-
-  public function getShopperEmail() {
-    return $this->shopperEmail;
-  }
-
-  public function setShopperEmail($shopperEmail) {
-    $this->shopperEmail = $shopperEmail;
-    return $this;
-  }
-
-  public function getShopperIPAddress() {
-    return $this->shopperIPAddress;
-  }
-
-  public function setShopperIPAddress($shopperIPAddress) {
-    $this->shopperIPAddress = $shopperIPAddress;
-    return $this;
-  }
-
-  public function getCardHolderName() {
-    Utils::deprecation_error('Use getPaymentMeanInfo()->cardHolderName instead');
-    return $this->paymentMeanInfo->cardHolderName;
-  }
-
-  public function setCardHolderName($cardHolderName) {
-    Utils::deprecation_error('Use getPaymentMeanInfo()->cardHolderName instead');
-    if ($this->paymentMeanInfo == null) {
-      $this->paymentMeanInfo = new stdClass();
-    }
-    $this->paymentMeanInfo->cardHolderName = $cardHolderName;
-    return $this;
-  }
-
   public function getCtrlCustomData() {
     return $this->ctrlCustomData;
   }
@@ -1992,6 +3095,1590 @@ class TransactionStatus {
     $this->ctrlCustomData = $ctrlCustomData;
     return $this;
   }
+
+  public function getTransactions() {
+    return $this->transactions;
+  }
+
+  public function setTransactions($transactions) {
+    $this->transactions = $transactions;
+    return $this;
+  }
+
+  /**
+   *
+   * @deprecated Use getLastInitialTransactionAttempt()
+   * @return \PayXpert\Connect2Pay\TransactionAttempt
+   */
+  public function getLastTransactionAttempt() {
+    return $this->getLastInitialTransactionAttempt();
+  }
+
+  /**
+   * Return the last initial transaction attempt done for this payment.
+   * Only returns sale, authorize or submission. Transactions with a referral
+   * are not considered by this method, only initial transactions done by the
+   * customer to complete the payment.
+   *
+   * @return TransactionAttempt The last transaction attempt done for this
+   *         payment
+   */
+  public function getLastInitialTransactionAttempt() {
+    $lastAttempt = null;
+
+    if (isset($this->transactions) && is_array($this->transactions) && count($this->transactions) > 0) {
+      // Return the entry with the highest timestamp with type sale, authorize,
+      // or submission
+      foreach ($this->transactions as $transaction) {
+        if (in_array($transaction->getOperation(), array("sale", "authorize", "submission")) && $transaction->getRefTransactionID() == null) {
+          if ($lastAttempt == null || $lastAttempt->getDate() < $transaction->getDate()) {
+            $lastAttempt = $transaction;
+          }
+        }
+      }
+    }
+
+    return $lastAttempt;
+  }
+
+  /**
+   * Get the transaction attempt referring to the provided transactionId with
+   * the given operation.
+   * In case several transactions are found will return the older one. Used for
+   * example to retrieve the collection for a submission.
+   *
+   * @param
+   *          refTransactionId The transaction identifier of the referral
+   *          (initial) transaction
+   * @param
+   *          transactionOperation The operation of the transaction to retrieve
+   *          (collection, refund...)
+   * @return TransactionAttempt The TransactionAttempt found or null if not
+   *         found
+   */
+  public function getReferringTransactionAttempt($refTransactionId, $transactionOperation) {
+    $attempts = $this->getReferringTransactionAttempts($refTransactionId, $transactionOperation);
+
+    if (is_array($attempts) && count($attempts) > 0) {
+      return $attempts[0];
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the transaction attempts referring to the provided transactionId with
+   * the given operation.
+   *
+   * @param
+   *          refTransactionId The transaction identifier of the referral
+   *          (initial) transaction
+   * @param
+   *          transactionOperation The operation of the transactions to retrieve
+   *          (collection, refund...). If null, all operations are returned.
+   *
+   * @return array TransactionAttempt A list with the transactions found (sorted
+   *         by date, older first) or
+   *         an empty list if not found
+   */
+  public function getReferringTransactionAttempts($refTransactionId, $transactionOperation = null) {
+    $attempts = array();
+
+    if ($refTransactionId !== null && isset($this->transactions) && is_array($this->transactions) && count($this->transactions) > 0) {
+      foreach ($this->transactions as $transaction) {
+        if ($refTransactionId === $transaction->getRefTransactionId() &&
+            ($transactionOperation == null || $transactionOperation === $transaction->getOperation())) {
+          $attempts[] = $transaction;
+        }
+      }
+
+      // Sort the array by transaction date ascending
+      if (count($attempts) > 1) {
+        usort($attempts,
+            function ($t1, $t2) {
+              $date1 = $t1->getDate();
+              $date2 = $t2->getDate();
+
+              if ($date1 === null && $date2 !== null) {
+                return -1;
+              }
+              if ($date1 !== null && $date2 === null) {
+                return 1;
+              }
+
+              return ($date1 === $date2 ? 0 : ($date1 < $date2 ? -1 : 1));
+            });
+      }
+    }
+
+    return $attempts;
+  }
+
+  public static function getFromJson($statusJson) {
+    $paymentStatus = null;
+
+    if ($statusJson != null && is_object($statusJson)) {
+      // Root element, PaymentStatus
+      $paymentStatus = new PaymentStatus();
+      $reflector = new \ReflectionClass('PayXpert\Connect2Pay\PaymentStatus');
+      self::copyScalarProperties($reflector->getProperties(), $statusJson, $paymentStatus);
+
+      // Transaction attempts
+      if (isset($statusJson->transactions) && is_array($statusJson->transactions)) {
+        $transactionAttempts = array();
+
+        foreach ($statusJson->transactions as $transaction) {
+          $transactionAttempts[] = TransactionAttempt::getFromJson($transaction);
+        }
+
+        $paymentStatus->setTransactions($transactionAttempts);
+      }
+    }
+
+    return $paymentStatus;
+  }
+}
+
+class TransactionAttempt extends Container {
+  /**
+   * Identifier of the payment this transaction belongs to
+   *
+   * @var string
+   */
+  private $paymentID;
+
+  /**
+   * Merchant Token of the payment this transaction belongs to
+   *
+   * @var string
+   */
+  private $paymentMerchantToken;
+
+  /**
+   * Method of payment for this transaction attempt: CreditCard, BankTransfer,
+   * ToditoCash, DirectDebit...
+   *
+   * @var String
+   */
+  private $paymentMethod;
+
+  /**
+   * Payment network used when the payment method is multi networks
+   *
+   * @var String
+   */
+  private $paymentNetwork;
+
+  /**
+   * Type of operation for that transaction: sale, authorize, rebill,
+   * submission, collection, refund
+   *
+   * @var String
+   */
+  private $operation;
+
+  /**
+   * Date of the transaction
+   *
+   * @var integer
+   */
+  private $date;
+
+  /**
+   * Amount of the transaction
+   *
+   * @var integer
+   */
+  private $amount;
+
+  /**
+   * Amount already refunded for this transaction
+   *
+   * @var integer
+   */
+  private $refundedAmount;
+
+  /**
+   * The currency for the transaction
+   *
+   * @var String
+   */
+  private $currency;
+
+  /**
+   * The result code for this transaction
+   *
+   * @var String
+   */
+  private $resultCode;
+
+  /**
+   * The result message for this transaction
+   *
+   * @var String
+   */
+  private $resultMessage;
+
+  /**
+   * Status of the transaction: "Authorized", "Not authorized", "Expired", "Call
+   * failed", "Pending" or "Not processed"
+   *
+   * @var String
+   */
+  private $status;
+
+  /**
+   * Shopper information for this transaction
+   *
+   * @var Shopper
+   */
+  private $shopper;
+
+  /**
+   * Transaction identifier of this transaction.
+   *
+   * @var String
+   */
+  private $transactionID;
+
+  /**
+   * Identifier of the transaction this transaction refers to.
+   *
+   * @var String
+   */
+  private $refTransactionID;
+
+  /**
+   * Identifier of the transaction at the provider side.
+   *
+   * @var String
+   */
+  private $providerTransactionID;
+
+  /**
+   * Identifier of the subscription this transaction is part of (if any).
+   *
+   * @var Int
+   */
+  private $subscriptionID;
+
+  /**
+   * Details of the payment mean used to process the transaction
+   *
+   * @var object Depends on the paymentMethod
+   */
+  private $paymentMeanInfo;
+
+  /**
+   * The merchant internal unique order identifier as provided during payment creation
+   *
+   * @var String
+   */
+  private $orderID;
+
+  /**
+   * The description of the product purchased by the customer as provided during payment creation
+   *
+   * @var String
+   */
+  private $orderDescription;
+
+  public function getPaymentID() {
+    return $this->paymentID;
+  }
+
+  public function setPaymentID($paymentID) {
+    $this->paymentID = $paymentID;
+    return $this;
+  }
+
+  public function getPaymentMerchantToken() {
+    return $this->paymentMerchantToken;
+  }
+
+  public function setPaymentMerchantToken($paymentMerchantToken) {
+    $this->paymentMerchantToken = $paymentMerchantToken;
+    return $this;
+  }
+
+  /**
+   *
+   * @deprecated Use getPaymentMethod()
+   */
+  public function getPaymentType() {
+    Utils::deprecation_error('Use getPaymentMethod().');
+    return $this->getPaymentMethod();
+  }
+
+  /**
+   *
+   * @deprecated Use setPaymentMethod()
+   */
+  public function setPaymentType($paymentType) {
+    Utils::deprecation_error('Use setPaymentMethod().');
+    return $this->setPaymentMethod($paymentType);
+  }
+
+  public function getPaymentMethod() {
+    return $this->paymentMethod;
+  }
+
+  public function setPaymentMethod($paymentMethod) {
+    $this->paymentMethod = $paymentMethod;
+    return $this;
+  }
+
+  public function getPaymentNetwork() {
+    return $this->paymentNetwork;
+  }
+
+  public function setPaymentNetwork($paymentNetwork) {
+    $this->paymentNetwork = $paymentNetwork;
+    return $this;
+  }
+
+  public function getOperation() {
+    return $this->operation;
+  }
+
+  public function setOperation($operation) {
+    $this->operation = $operation;
+    return $this;
+  }
+
+  public function getDate() {
+    return $this->date;
+  }
+
+  public function getDateAsDateTime() {
+    if ($this->date != null) {
+      // API returns date as timestamp in milliseconds
+      $timestamp = intval($this->date / 1000);
+      return new \DateTime("@" . $timestamp);
+    }
+
+    return null;
+  }
+
+  public function setDate($date) {
+    $this->date = $date;
+    return $this;
+  }
+
+  public function getAmount() {
+    return $this->amount;
+  }
+
+  public function setAmount($amount) {
+    $this->amount = $amount;
+    return $this;
+  }
+
+  public function getRefundedAmount() {
+    return $this->refundedAmount;
+  }
+
+  public function setRefundedAmount($refundedAmount) {
+    $this->refundedAmount = $refundedAmount;
+    return $this;
+  }
+
+  public function getCurrency() {
+    return $this->currency;
+  }
+
+  public function setCurrency($currency) {
+    $this->currency = $currency;
+    return $this;
+  }
+
+  public function getResultCode() {
+    return $this->resultCode;
+  }
+
+  public function setResultCode($resultCode) {
+    $this->resultCode = $resultCode;
+    return $this;
+  }
+
+  public function getResultMessage() {
+    return $this->resultMessage;
+  }
+
+  public function setResultMessage($resultMessage) {
+    $this->resultMessage = $resultMessage;
+    return $this;
+  }
+
+  public function getStatus() {
+    return $this->status;
+  }
+
+  public function setStatus($status) {
+    $this->status = $status;
+    return $this;
+  }
+
+  public function getShopper() {
+    return $this->shopper;
+  }
+
+  public function setShopper($shopper) {
+    $this->shopper = $shopper;
+    return $this;
+  }
+
+  public function getTransactionID() {
+    return $this->transactionID;
+  }
+
+  public function setTransactionID($transactionID) {
+    $this->transactionID = $transactionID;
+    return $this;
+  }
+
+  public function getRefTransactionID() {
+    return $this->refTransactionID;
+  }
+
+  public function setRefTransactionID($refTransactionID) {
+    $this->refTransactionID = $refTransactionID;
+    return $this;
+  }
+
+  public function getProviderTransactionID() {
+    return $this->providerTransactionID;
+  }
+
+  public function setProviderTransactionID($providerTransactionID) {
+    $this->providerTransactionID = $providerTransactionID;
+    return $this;
+  }
+
+  /**
+   *
+   * @deprecated Use getPaymentNetwork()
+   */
+  public function getProvider() {
+    Utils::deprecation_error('Use getPaymentNetwork().');
+    return $this->paymentNetwork;
+  }
+
+  /**
+   *
+   * @deprecated Use setPaymentNetwork()
+   */
+  public function setProvider($provider) {
+    Utils::deprecation_error('Use setPaymentNetwork().');
+    return $this->setPaymentNetwork($provider);
+  }
+
+  public function getSubscriptionID() {
+    return $this->subscriptionID;
+  }
+
+  public function setSubscriptionID($subscriptionID) {
+    $this->subscriptionID = $subscriptionID;
+    return $this;
+  }
+
+  public function getPaymentMeanInfo() {
+    return $this->paymentMeanInfo;
+  }
+
+  public function setPaymentMeanInfo($paymentMeanInfo) {
+    $this->paymentMeanInfo = $paymentMeanInfo;
+    return $this;
+  }
+
+  public function getOrderID() {
+    return $this->orderID;
+  }
+
+  public function setOrderID($orderID) {
+    $this->orderID = $orderID;
+    return $this;
+  }
+
+  public function setOrderDescription($orderDescription) {
+    $this->orderDescription = $orderDescription;
+    return $this;
+  }
+
+  public function getOrderDescription() {
+    return $this->orderDescription;
+  }
+
+  public static function getFromRawJson($json) {
+    return self::getFromJson(json_decode($json, false));
+  }
+
+  public static function getFromJson($transaction) {
+    $transAttempt = null;
+
+    if ($transaction != null && is_object($transaction)) {
+      $transAttempt = new TransactionAttempt();
+
+      $reflector = new \ReflectionClass('PayXpert\Connect2Pay\TransactionAttempt');
+      self::copyScalarProperties($reflector->getProperties(), $transaction, $transAttempt);
+
+      // Set the shopper
+      if (isset($transaction->shopper) && is_object($transaction->shopper)) {
+        $shopper = new Shopper();
+        $reflector = new \ReflectionClass('PayXpert\Connect2Pay\Shopper');
+
+        self::copyScalarProperties($reflector->getProperties(), $transaction->shopper, $shopper);
+
+        $transAttempt->setShopper($shopper);
+      }
+
+      // Payment Mean Info
+      if (isset($transaction->paymentMethod) && isset($transaction->paymentMeanInfo) && is_object($transaction->paymentMeanInfo)) {
+        $paymentMeanInfo = null;
+        switch ($transaction->paymentMethod) {
+          case Connect2PayClient::PAYMENT_METHOD_CREDITCARD:
+            $paymentMeanInfo = self::extractCreditCardPaymentMeanInfo($transaction->paymentMeanInfo);
+            break;
+          case Connect2PayClient::PAYMENT_METHOD_TODITOCASH:
+            $paymentMeanInfo = self::extractToditoCashPaymentMeanInfo($transaction->paymentMeanInfo);
+            break;
+          case Connect2PayClient::PAYMENT_METHOD_BANKTRANSFER:
+            $paymentMeanInfo = self::extractBankTransferPaymentMeanInfo($transaction->paymentMeanInfo);
+            break;
+          case Connect2PayClient::PAYMENT_METHOD_DIRECTDEBIT:
+            $paymentMeanInfo = self::extractDirectDebitPaymentMeanInfo($transaction->paymentMeanInfo);
+            break;
+        }
+
+        if ($paymentMeanInfo !== null) {
+          $transAttempt->setPaymentMeanInfo($paymentMeanInfo);
+        }
+      }
+    }
+
+    return $transAttempt;
+  }
+
+  private static function extractCreditCardPaymentMeanInfo($paymentMeanInfo) {
+    $ccInfo = new CreditCardPaymentMeanInfo();
+    $reflector = new \ReflectionClass('PayXpert\Connect2Pay\CreditCardPaymentMeanInfo');
+    self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo, $ccInfo);
+
+    return $ccInfo;
+  }
+
+  private static function extractToditoCashPaymentMeanInfo($paymentMeanInfo) {
+    $tcInfo = new ToditoCashPaymentMeanInfo();
+    $reflector = new \ReflectionClass('PayXpert\Connect2Pay\ToditoCashPaymentMeanInfo');
+    self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo, $tcInfo);
+
+    return $tcInfo;
+  }
+
+  private static function extractBankTransferPaymentMeanInfo($paymentMeanInfo) {
+    $btInfo = new BankTransferPaymentMeanInfo();
+    $reflector = new \ReflectionClass('PayXpert\Connect2Pay\BankAccount');
+
+    if (isset($paymentMeanInfo->sender) && is_object($paymentMeanInfo->sender)) {
+      $sender = new BankAccount();
+      self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo->sender, $sender);
+      $btInfo->setSender($sender);
+    }
+
+    if (isset($paymentMeanInfo->recipient) && is_object($paymentMeanInfo->recipient)) {
+      $recipient = new BankAccount();
+      self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo->recipient, $recipient);
+      $btInfo->setRecipient($recipient);
+    }
+
+    return $btInfo;
+  }
+
+  private static function extractDirectDebitPaymentMeanInfo($paymentMeanInfo) {
+    $ddInfo = new DirectDebitPaymentMeanInfo();
+
+    $reflector = new \ReflectionClass('PayXpert\Connect2Pay\DirectDebitPaymentMeanInfo');
+    self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo, $ddInfo);
+
+    if (is_object($paymentMeanInfo->bankAccount)) {
+      $reflector = new \ReflectionClass('PayXpert\Connect2Pay\BankAccount');
+      $account = new BankAccount();
+      self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo->bankAccount, $account);
+
+      if (is_object($paymentMeanInfo->bankAccount->sepaMandate)) {
+        $reflector = new \ReflectionClass('PayXpert\Connect2Pay\SepaMandate');
+        $mandate = new SepaMandate();
+        self::copyScalarProperties($reflector->getProperties(), $paymentMeanInfo->bankAccount->sepaMandate, $mandate);
+        $account->setSepaMandate($mandate);
+      }
+
+      $ddInfo->setBankAccount($account);
+    }
+
+    return $ddInfo;
+  }
+}
+
+class Shopper {
+  /**
+   * Name provided by the shopper
+   *
+   * @var String
+   */
+  private $name;
+
+  /**
+   * Address provided by the shopper
+   *
+   * @var String
+   */
+  private $address;
+
+  /**
+   * Zipcode provided by the shopper.
+   *
+   * @var String
+   */
+  private $zipcode;
+
+  /**
+   * City provided by the shopper.
+   *
+   * @var String
+   */
+  private $city;
+
+  /**
+   * State provided by the shopper
+   *
+   * @var String
+   */
+  private $state;
+
+  /**
+   * Country provided by the shopper.
+   *
+   * @var String
+   */
+  private $countryCode;
+
+  /**
+   * Phone provided by the shopper
+   *
+   * @var String
+   */
+  private $phone;
+
+  /**
+   * Email address provided by the shopper.
+   *
+   * @var String
+   */
+  private $email;
+
+  /**
+   * Birth date provided by the shopper (YYYYMMDD)
+   *
+   * @var string
+   */
+  private $birthDate;
+
+  /**
+   * ID number provided by the shopper (identity card, passport...)
+   *
+   * @var string
+   */
+  private $idNumber;
+
+  /**
+   * IP address of the shopper
+   *
+   * @var String
+   */
+  private $ipAddress;
+
+  public function getName() {
+    return $this->name;
+  }
+
+  public function setName($name) {
+    $this->name = $name;
+    return $this;
+  }
+
+  public function getAddress() {
+    return $this->address;
+  }
+
+  public function setAddress($address) {
+    $this->address = $address;
+    return $this;
+  }
+
+  public function getZipcode() {
+    return $this->zipcode;
+  }
+
+  public function setZipcode($zipcode) {
+    $this->zipcode = $zipcode;
+    return $this;
+  }
+
+  public function getCity() {
+    return $this->city;
+  }
+
+  public function setCity($city) {
+    $this->city = $city;
+    return $this;
+  }
+
+  public function getState() {
+    return $this->state;
+  }
+
+  public function setState($state) {
+    $this->state = $state;
+    return $this;
+  }
+
+  public function getCountryCode() {
+    return $this->countryCode;
+  }
+
+  public function setCountryCode($countryCode) {
+    $this->countryCode = $countryCode;
+    return $this;
+  }
+
+  public function getPhone() {
+    return $this->phone;
+  }
+
+  public function setPhone($phone) {
+    $this->phone = $phone;
+    return $this;
+  }
+
+  public function getEmail() {
+    return $this->email;
+  }
+
+  public function setEmail($email) {
+    $this->email = $email;
+    return $this;
+  }
+
+  public function getBirthDate() {
+    return $this->birthDate;
+  }
+
+  public function setBirthDate($birthDate) {
+    $this->birthDate = $birthDate;
+    return $this;
+  }
+
+  public function getIdNumber() {
+    return $this->idNumber;
+  }
+
+  public function setIdNumber($idNumber) {
+    $this->idNumber = $idNumber;
+    return $this;
+  }
+
+  public function getIpAddress() {
+    return $this->ipAddress;
+  }
+
+  public function setIpAddress($ipAddress) {
+    $this->ipAddress = $ipAddress;
+    return $this;
+  }
+}
+
+class CreditCardPaymentMeanInfo {
+  /**
+   * The truncated card number used for this transaction
+   *
+   * @var string
+   */
+  private $cardNumber;
+
+  /**
+   * The card expiration year
+   *
+   * @var string
+   */
+  private $cardExpireYear;
+
+  /**
+   * The card expire month
+   *
+   * @var string
+   */
+  private $cardExpireMonth;
+
+  /**
+   * The name of the holder of the card
+   *
+   * @var string
+   */
+  private $cardHolderName;
+
+  /**
+   * Brand of the card (Visa, Mcrd...)
+   *
+   * @var string
+   */
+  private $cardBrand;
+
+  /**
+   * Level of the card.
+   * Special permission needed
+   *
+   * @var string
+   */
+  private $cardLevel;
+
+  /**
+   * Sub type of the card.
+   * Special permission needed.
+   *
+   * @var string
+   */
+  private $cardSubType;
+
+  /**
+   * ISO2 country code of the issuer of the card.
+   * Special permission needed.
+   *
+   * @var string
+   */
+  private $iinCountry;
+
+  /**
+   * Card Issuer Bank Name.
+   * Special permission needed.
+   *
+   * @var string
+   */
+  private $iinBankName;
+
+  /**
+   * The liability shift for 3D Secure.
+   * Can be true or false
+   *
+   * @var boolean
+   */
+  private $is3DSecure;
+
+  /**
+   * Credit Card Descriptor for this transaction
+   *
+   * @var String
+   */
+  private $statementDescriptor;
+
+  public function getCardNumber() {
+    return $this->cardNumber;
+  }
+
+  public function setCardNumber($cardNumber) {
+    $this->cardNumber = $cardNumber;
+    return $this;
+  }
+
+  public function getCardExpireYear() {
+    return $this->cardExpireYear;
+  }
+
+  public function setCardExpireYear($cardExpireYear) {
+    $this->cardExpireYear = $cardExpireYear;
+    return $this;
+  }
+
+  public function getCardExpireMonth() {
+    return $this->cardExpireMonth;
+  }
+
+  public function setCardExpireMonth($cardExpireMonth) {
+    $this->cardExpireMonth = $cardExpireMonth;
+    return $this;
+  }
+
+  public function getCardHolderName() {
+    return $this->cardHolderName;
+  }
+
+  public function setCardHolderName($cardHolderName) {
+    $this->cardHolderName = $cardHolderName;
+    return $this;
+  }
+
+  public function getCardBrand() {
+    return $this->cardBrand;
+  }
+
+  public function setCardBrand($cardBrand) {
+    $this->cardBrand = $cardBrand;
+    return $this;
+  }
+
+  public function getCardLevel() {
+    return $this->cardLevel;
+  }
+
+  public function setCardLevel($cardLevel) {
+    $this->cardLevel = $cardLevel;
+    return $this;
+  }
+
+  public function getCardSubType() {
+    return $this->cardSubType;
+  }
+
+  public function setCardSubType($cardSubType) {
+    $this->cardSubType = $cardSubType;
+    return $this;
+  }
+
+  public function getIinCountry() {
+    return $this->iinCountry;
+  }
+
+  public function setIinCountry($iinCountry) {
+    $this->iinCountry = $iinCountry;
+    return $this;
+  }
+
+  public function getIinBankName() {
+    return $this->iinBankName;
+  }
+
+  public function setIinBankName($iinBankName) {
+    $this->iinBankName = $iinBankName;
+    return $this;
+  }
+
+  public function getIs3DSecure() {
+    return $this->is3DSecure;
+  }
+
+  public function setIs3DSecure($is3DSecure) {
+    $this->is3DSecure = $is3DSecure;
+    return $this;
+  }
+
+  public function getStatementDescriptor() {
+    return $this->statementDescriptor;
+  }
+
+  public function setStatementDescriptor($statementDescriptor) {
+    $this->statementDescriptor = $statementDescriptor;
+    return $this;
+  }
+}
+
+class ToditoCashPaymentMeanInfo {
+  /**
+   * The truncated Todito card number used for this transaction
+   *
+   * @var string
+   */
+  private $cardNumber;
+
+  public function getCardNumber() {
+    return $this->cardNumber;
+  }
+
+  public function setCardNumber($cardNumber) {
+    $this->cardNumber = $cardNumber;
+    return $this;
+  }
+}
+
+class BankTransferPaymentMeanInfo {
+  /**
+   * Sender account
+   *
+   * @var BankAccount
+   */
+  private $sender;
+
+  /**
+   * Recipient account
+   *
+   * @var BankAccount
+   */
+  private $recipient;
+
+  public function getSender() {
+    return $this->sender;
+  }
+
+  public function setSender($sender) {
+    $this->sender = $sender;
+    return $this;
+  }
+
+  public function getRecipient() {
+    return $this->recipient;
+  }
+
+  public function setRecipient($recipient) {
+    $this->recipient = $recipient;
+    return $this;
+  }
+}
+
+class DirectDebitPaymentMeanInfo {
+  /**
+   * Bank account
+   *
+   * @var BankAccount
+   */
+  private $bankAccount;
+
+  /**
+   * Statement Descriptor
+   *
+   * @var String
+   */
+  private $statementDescriptor;
+
+  /**
+   * Date of collection of the transaction
+   *
+   * @var integer
+   */
+  private $collectedAt;
+
+  public function getBankAccount() {
+    return $this->bankAccount;
+  }
+
+  public function setBankAccount($bankAccount) {
+    $this->bankAccount = $bankAccount;
+    return $this;
+  }
+
+  public function getStatementDescriptor() {
+    return $this->statementDescriptor;
+  }
+
+  public function setStatementDescriptor($statementDescriptor) {
+    $this->statementDescriptor = $statementDescriptor;
+    return $this;
+  }
+
+  public function getCollectedAt() {
+    return $this->collectedAt;
+  }
+
+  public function getCollectedAtAsDateTime() {
+    if ($this->collectedAt != null) {
+      // API returns date as timestamp in milliseconds
+      $timestamp = intval($this->collectedAt / 1000);
+      return new \DateTime("@" . $timestamp);
+    }
+
+    return null;
+  }
+
+  public function setCollectedAt($collectedAt) {
+    $this->collectedAt = $collectedAt;
+    return $this;
+  }
+}
+
+class BankAccount {
+  /**
+   * The account holder name
+   *
+   * @var string
+   */
+  private $holderName;
+
+  /**
+   * Name of the bank of the account
+   *
+   * @var string
+   */
+  private $bankName;
+
+  /**
+   * IBAN number of the account (truncated)
+   *
+   * @var string
+   */
+  private $iban;
+
+  /**
+   * BIC number of the account
+   *
+   * @var string
+   */
+  private $bic;
+
+  /**
+   * ISO2 country code of the account
+   *
+   * @var string
+   */
+  private $countryCode;
+
+  /**
+   * The optional SEPA mandate associated with the account
+   *
+   * @var SepaMandate
+   */
+  private $sepaMandate;
+
+  public function getHolderName() {
+    return $this->holderName;
+  }
+
+  public function setHolderName($holderName) {
+    $this->holderName = $holderName;
+    return $this;
+  }
+
+  public function getBankName() {
+    return $this->bankName;
+  }
+
+  public function setBankName($bankName) {
+    $this->bankName = $bankName;
+    return $this;
+  }
+
+  public function getIban() {
+    return $this->iban;
+  }
+
+  public function setIban($iban) {
+    $this->iban = $iban;
+    return $this;
+  }
+
+  public function getBic() {
+    return $this->bic;
+  }
+
+  public function setBic($bic) {
+    $this->bic = $bic;
+    return $this;
+  }
+
+  public function getCountryCode() {
+    return $this->countryCode;
+  }
+
+  public function setCountryCode($countryCode) {
+    $this->countryCode = $countryCode;
+    return $this;
+  }
+
+  public function getSepaMandate() {
+    return $this->sepaMandate;
+  }
+
+  public function setSepaMandate($sepaMandate) {
+    $this->sepaMandate = $sepaMandate;
+    return $this;
+  }
+}
+
+class SepaMandate {
+  /**
+   * Description of the mandate
+   *
+   * @var string
+   */
+  private $description;
+
+  /**
+   * Status of the mandate (SIGNED...)
+   *
+   * @var string
+   */
+  private $status;
+
+  /**
+   * Type of the mandate (RECURRENT or ONETIME)
+   *
+   * @var string
+   */
+  private $type;
+
+  /**
+   * Scheme of the mandate (CORE, COR1, B2B)
+   *
+   * @var string
+   */
+  private $scheme;
+
+  /**
+   * Signature type of the mandate (CHECKBOX, SMS...)
+   *
+   * @var string
+   */
+  private $signatureType;
+
+  /**
+   * Phone number used in case of SMS signature
+   *
+   * @var string
+   */
+  private $phoneNumber;
+
+  /**
+   * Date of signature (timestamp)
+   *
+   * @var integer
+   */
+  private $signedAt;
+
+  /**
+   * Date of creation (timestamp)
+   *
+   * @var integer
+   */
+  private $createdAt;
+
+  /**
+   * Date of last use (timestamp)
+   *
+   * @var integer
+   */
+  private $lastUsedAt;
+
+  /**
+   * URL to download the mandate
+   *
+   * @var string
+   */
+  private $downloadUrl;
+
+  /**
+   * Description of the mandate
+   *
+   * @return string The description of the mandate
+   */
+  public function getDescription() {
+    return $this->description;
+  }
+
+  /**
+   * Set the description of the mandate
+   *
+   * @param
+   *          description
+   *          The description to set
+   */
+  public function setDescription($description) {
+    $this->description = $description;
+  }
+
+  /**
+   * Status of the mandate.
+   * PENDING_SIGNATURE, AUTOSIGNED, SIGNED, EXPIRED, REVOKED or USED
+   *
+   * @return string The current status of the mandate
+   */
+  public function getStatus() {
+    return $this->status;
+  }
+
+  /**
+   * Set the current status of the mandate
+   *
+   * @param
+   *          status
+   *          The status to set
+   */
+  public function setStatus($status) {
+    $this->status = $status;
+  }
+
+  /**
+   * The type of mandate.
+   * RECURRENT or ONETIME
+   *
+   * @return string The type of mandate
+   */
+  public function getType() {
+    return $this->type;
+  }
+
+  /**
+   * Set the current mandate type
+   *
+   * @param
+   *          type
+   *          The type to set
+   */
+  public function setType($type) {
+    $this->type = $type;
+  }
+
+  /**
+   * The scheme of the mandate.
+   * CORE, COR1 or B2B
+   *
+   * @return string The scheme of the mandate
+   */
+  public function getScheme() {
+    return $this->scheme;
+  }
+
+  /**
+   * Set the current scheme of the mandate
+   *
+   * @param
+   *          scheme
+   *          The scheme to set
+   */
+  public function setScheme($scheme) {
+    $this->scheme = $scheme;
+  }
+
+  /**
+   * The type of signature used to sign the mandate.
+   * CHECKBOX, BIOMETRIC or SMS
+   *
+   * @return string The type of signature used.
+   */
+  public function getSignatureType() {
+    return $this->signatureType;
+  }
+
+  /**
+   * Set the type of signature used to sign the mandate.
+   *
+   * @param
+   *          signatureType
+   *          The type to set
+   */
+  public function setSignatureType($signatureType) {
+    $this->signatureType = $signatureType;
+  }
+
+  /**
+   * The phone number used in case the mandate has been signed by SMS.
+   *
+   * @return string The phone number used for SMS signature
+   */
+  public function getPhoneNumber() {
+    return $this->phoneNumber;
+  }
+
+  /**
+   * Set the phone number
+   *
+   * @param
+   *          phoneNumber
+   *          The phone number to set
+   */
+  public function setPhoneNumber($phoneNumber) {
+    $this->phoneNumber = $phoneNumber;
+  }
+
+  /**
+   * The date of mandate signature.
+   *
+   * @return integer The date that mandate was signed at
+   */
+  public function getSignedAt() {
+    return $this->signedAt;
+  }
+
+  /**
+   * The date of mandate signature as DateTime.
+   *
+   * @return \DateTime The date that mandate was signed at as DateTime object
+   */
+  public function getSignedAtAsDateTime() {
+    return $this->getTimestampAsDateTime($this->signedAt);
+  }
+
+  /**
+   * Set the mandate signing date.
+   *
+   * @param
+   *          signedAt
+   *          The signing date to set
+   */
+  public function setSignedAt($signedAt) {
+    $this->signedAt = $signedAt;
+  }
+
+  /**
+   * The date of mandate creation.
+   *
+   * @return integer The date that mandate was created at
+   */
+  public function getCreatedAt() {
+    return $this->createdAt;
+  }
+
+  /**
+   * The date of mandate creation as DateTime.
+   *
+   * @return \DateTime The date that mandate was created at as DateTime object
+   */
+  public function getCreatedAtAsDateTime() {
+    return $this->getTimestampAsDateTime($this->createdAt);
+  }
+
+  /**
+   * Set the mandate creation date.
+   *
+   * @param
+   *          createdAt
+   *          The creation date to set
+   */
+  public function setCreatedAt($createdAt) {
+    $this->createdAt = $createdAt;
+  }
+
+  /**
+   * The date of last mandate use.
+   *
+   * @return integer The date that mandate was last used at
+   */
+  public function getLastUsedAt() {
+    return $this->lastUsedAt;
+  }
+
+  /**
+   * The date of last mandate use as DateTime.
+   *
+   * @return \DateTime The date that mandate was last used at as DateTime object
+   */
+  public function getLastUsedAtAsDateTime() {
+    return $this->getTimestampAsDateTime($this->lastUsedAt);
+  }
+
+  /**
+   * Set the mandate last used date.
+   *
+   * @param
+   *          lastUsedAt
+   *          The last used date to set
+   */
+  public function setLastUsedAt($lastUsedAt) {
+    $this->lastUsedAt = $lastUsedAt;
+  }
+
+  /**
+   * The URL at which the mandate can be downloaded
+   *
+   * @return string The download URL of the mandate
+   */
+  public function getDownloadUrl() {
+    return $this->downloadUrl;
+  }
+
+  /**
+   * Set the mandate download URL
+   *
+   * @param
+   *          downloadUrl
+   *          The URL to set
+   */
+  public function setDownloadUrl($downloadUrl) {
+    $this->downloadUrl = $downloadUrl;
+  }
+
+  private function getTimestampAsDateTime($timestamp) {
+    if ($timestamp != null) {
+      // API returns date as timestamp in milliseconds
+      $timestamp = intval($timestamp / 1000);
+      return new \DateTime("@" . $timestamp);
+    }
+
+    return null;
+  }
+}
+
+class OperationStatus {
+  /**
+   * Result code of the refund call
+   *
+   * @var Int
+   */
+  private $code;
+
+  /**
+   * Error message of the refund call
+   *
+   * @var String
+   */
+  private $message;
+
+  /**
+   * Transaction identifier of refund transaction.
+   *
+   * @var String
+   */
+  private $transactionID;
+
+  /**
+   * The effective operation done by the call
+   *
+   * @var String
+   */
+  private $operation;
+
+  public function getCode() {
+    return $this->code;
+  }
+
+  public function setCode($code) {
+    $this->code = $code;
+    return $this;
+  }
+
+  public function getMessage() {
+    return $this->message;
+  }
+
+  public function setMessage($message) {
+    $this->message = $message;
+    return $this;
+  }
+
+  public function getTransactionID() {
+    return $this->transactionID;
+  }
+
+  public function setTransactionID($transactionID) {
+    $this->transactionID = $transactionID;
+    return $this;
+  }
+
+  public function getOperation() {
+    return $this->operation;
+  }
+
+  public function setOperation($operation) {
+    $this->operation = $operation;
+    return $this;
+  }
+}
+
+class RefundStatus extends OperationStatus {
+}
+
+class RebillStatus extends OperationStatus {
+}
+
+class CancelStatus extends OperationStatus {
+}
+
+class CaptureStatus extends OperationStatus {
 }
 
 class CartProduct {
@@ -2078,18 +4765,513 @@ class CartProduct {
   }
 }
 
+class WeChatDirectProcessRequest {
+  const MODE_NATIVE = "native";
+  const MODE_QUICKPAY = "quickpay";
+  const MODE_SDK = "sdk";
+  const MODE_MINIPROGRAM = "miniprogram";
+
+  /* ~~ */
+  public $apiVersion;
+  public $mode;
+  public $quickPayCode;
+  public $notificationLang;
+  public $notificationTimeZone;
+  public $openID;
+
+  public function setApiVersion($apiVersion) {
+    $this->apiVersion = $apiVersion;
+    return $this;
+  }
+
+  public function setMode($mode) {
+    $this->mode = in_array($mode, array(self::MODE_NATIVE, self::MODE_QUICKPAY, self::MODE_SDK, self::MODE_MINIPROGRAM)) ? $mode : self::MODE_NATIVE;
+    return $this;
+  }
+
+  public function setQuickPayCode($quickPayCode) {
+    $this->quickPayCode = $quickPayCode;
+    return $this;
+  }
+
+  public function setNotificationLang($notificationLang) {
+    $this->notificationLang = $notificationLang;
+    return $this;
+  }
+
+  public function setNotificationTimeZone($notificationTimeZone) {
+    $this->notificationTimeZone = $notificationTimeZone;
+    return $this;
+  }
+
+  public function setOpenID($openID) {
+    $this->openID = $openID;
+    return $this;
+  }
+}
+
+class WeChatDirectProcessResponse extends Container {
+  private $apiVersion;
+  private $code;
+  private $message;
+  private $exchangeRate;
+  private $qrCode;
+  private $qrCodeUrl;
+  private $webSocketUrl;
+  private $transactionID;
+  private $transactionInfo;
+  // SDK mode fields
+  private $appId;
+  private $partnerId;
+  private $prepayId;
+  private $packageStr;
+  private $nonceStr;
+  private $timestamp;
+  private $sign;
+  private $paySign;
+  private $signType;
+
+  public function getApiVersion() {
+    return $this->apiVersion;
+  }
+
+  public function setApiVersion($apiVersion) {
+    $this->apiVersion = $apiVersion;
+    return $this;
+  }
+
+  public function getCode() {
+    return $this->code;
+  }
+
+  public function setCode($code) {
+    $this->code = $code;
+    return $this;
+  }
+
+  public function getMessage() {
+    return $this->message;
+  }
+
+  public function setMessage($message) {
+    $this->message = $message;
+    return $this;
+  }
+
+  public function getExchangeRate() {
+    return $this->exchangeRate;
+  }
+
+  public function setExchangeRate($exchangeRate) {
+    $this->exchangeRate = $exchangeRate;
+    return $this;
+  }
+
+  public function getQrCode() {
+    return $this->qrCode;
+  }
+
+  public function setQrCode($qrCode) {
+    $this->qrCode = $qrCode;
+    return $this;
+  }
+
+  public function getQrCodeUrl() {
+    return $this->qrCodeUrl;
+  }
+
+  public function setQrCodeUrl($qrCodeUrl) {
+    $this->qrCodeUrl = $qrCodeUrl;
+    return $this;
+  }
+
+  public function getWebSocketUrl() {
+    return $this->webSocketUrl;
+  }
+
+  public function setWebSocketUrl($webSocketUrl) {
+    $this->webSocketUrl = $webSocketUrl;
+    return $this;
+  }
+
+  public function getTransactionID() {
+    return $this->transactionID;
+  }
+
+  public function setTransactionID($transactionID) {
+    $this->transactionID = $transactionID;
+    return $this;
+  }
+
+  public function getTransactionInfo() {
+    return $this->transactionInfo;
+  }
+
+  public function setTransactionInfo($transactionInfo) {
+    $this->transactionInfo = $transactionInfo;
+    return $this;
+  }
+
+  public function getAppId() {
+    return $this->appId;
+  }
+
+  public function setAppId($appId) {
+    $this->appId = $appId;
+    return $this;
+  }
+
+  public function getPartnerId() {
+    return $this->partnerId;
+  }
+
+  public function setPartnerId($partnerId) {
+    $this->partnerId = $partnerId;
+    return $this;
+  }
+
+  public function getPrepayId() {
+    return $this->prepayId;
+  }
+
+  public function setPrepayId($prepayId) {
+    $this->prepayId = $prepayId;
+    return $this;
+  }
+
+  public function getPackageStr() {
+    return $this->packageStr;
+  }
+
+  public function setPackageStr($packageStr) {
+    $this->packageStr = $packageStr;
+    return $this;
+  }
+
+  public function getNonceStr() {
+    return $this->nonceStr;
+  }
+
+  public function setNonceStr($nonceStr) {
+    $this->nonceStr = $nonceStr;
+    return $this;
+  }
+
+  public function getTimestamp() {
+    return $this->timestamp;
+  }
+
+  public function setTimestamp($timestamp) {
+    $this->timestamp = $timestamp;
+    return $this;
+  }
+
+  public function getPaySign() {
+    return $this->paySign;
+  }
+
+  public function setPaySign($paySign) {
+    $this->paySign = $paySign;
+    return $this;
+  }
+
+  public function getSignType() {
+      return $this->signType;
+  }
+
+  public function setSignType($signType) {
+      $this->signType = $signType;
+      return $this;
+  }
+
+  public static function getFromJson($dataJson) {
+    $response = null;
+
+    if ($dataJson != null && is_object($dataJson)) {
+      // Root element, AccountInformation
+      $response = new WeChatDirectProcessResponse();
+      $reflector = new \ReflectionClass('PayXpert\Connect2Pay\WeChatDirectProcessResponse');
+      self::copyScalarProperties($reflector->getProperties(), $dataJson, $response);
+
+      // Transaction information
+      if (isset($dataJson->transactionInfo)) {
+        $response->transactionInfo = TransactionAttempt::getFromJson($dataJson->transactionInfo);
+      }
+    }
+
+    return $response;
+  }
+}
+
+class AliPayDirectProcessRequest {
+  const MODE_POS = "pos";
+  const MODE_APP = "app";
+  const MODE_SDK = "sdk";
+  const IDENTITY_CODE_TYPE_BARCODE = "barcode";
+  const IDENTITY_CODE_TYPE_QRCODE = "qrcode";
+
+  /* ~~ */
+  public $apiVersion;
+  public $mode;
+  public $buyerIdentityCode;
+  public $identityCodeType;
+  public $notificationLang;
+  public $notificationTimeZone;
+
+  public function setApiVersion($apiVersion) {
+    $this->apiVersion = $apiVersion;
+    return $this;
+  }
+
+  public function setMode($mode) {
+    $this->mode = in_array($mode, array(self::MODE_POS, self::MODE_APP, self::MODE_SDK)) ? $mode : self::MODE_NATIVE;
+    return $this;
+  }
+
+  public function setBuyerIdentityCode($buyerIdentityCode) {
+    $this->buyerIdentityCode = $buyerIdentityCode;
+    return $this;
+  }
+
+  public function setIdentityCodeType($identityCodeType) {
+    $this->identityCodeType = $identityCodeType;
+    return $this;
+  }
+
+  public function setNotificationLang($notificationLang) {
+    $this->notificationLang = $notificationLang;
+    return $this;
+  }
+
+  public function setNotificationTimeZone($notificationTimeZone) {
+    $this->notificationTimeZone = $notificationTimeZone;
+    return $this;
+  }
+}
+
+class AliPayDirectProcessResponse extends Container {
+  private $apiVersion;
+  private $code;
+  private $message;
+  private $exchangeRate;
+  private $qrCode;
+  private $qrCodeUrl;
+  private $webSocketUrl;
+  private $transactionID;
+  private $transactionInfo;
+  // SDK mode field
+  private $rawRequest;
+
+  public function getApiVersion() {
+    return $this->apiVersion;
+  }
+
+  public function setApiVersion($apiVersion) {
+    $this->apiVersion = $apiVersion;
+    return $this;
+  }
+
+  public function getCode() {
+    return $this->code;
+  }
+
+  public function setCode($code) {
+    $this->code = $code;
+    return $this;
+  }
+
+  public function getMessage() {
+    return $this->message;
+  }
+
+  public function setMessage($message) {
+    $this->message = $message;
+    return $this;
+  }
+
+  public function getExchangeRate() {
+    return $this->exchangeRate;
+  }
+
+  public function setExchangeRate($exchangeRate) {
+    $this->exchangeRate = $exchangeRate;
+    return $this;
+  }
+
+  public function getQrCode() {
+    return $this->qrCode;
+  }
+
+  public function setQrCode($qrCode) {
+    $this->qrCode = $qrCode;
+    return $this;
+  }
+
+  public function getQrCodeUrl() {
+    return $this->qrCodeUrl;
+  }
+
+  public function setQrCodeUrl($qrCodeUrl) {
+    $this->qrCodeUrl = $qrCodeUrl;
+    return $this;
+  }
+
+  public function getWebSocketUrl() {
+    return $this->webSocketUrl;
+  }
+
+  public function setWebSocketUrl($webSocketUrl) {
+    $this->webSocketUrl = $webSocketUrl;
+    return $this;
+  }
+
+  public function getTransactionID() {
+    return $this->transactionID;
+  }
+
+  public function setTransactionID($transactionID) {
+    $this->transactionID = $transactionID;
+    return $this;
+  }
+
+  public function getTransactionInfo() {
+    return $this->transactionInfo;
+  }
+
+  public function setTransactionInfo($transactionInfo) {
+    $this->transactionInfo = $transactionInfo;
+    return $this;
+  }
+
+  public function getRawRequest() {
+    return $this->rawRequest;
+  }
+
+  public function setRawRequest($rawRequest) {
+    $this->rawRequest = $rawRequest;
+    return $this;
+  }
+
+  public static function getFromJson($dataJson) {
+    $response = null;
+
+    if ($dataJson != null && is_object($dataJson)) {
+      // Root element, AccountInformation
+      $response = new AliPayDirectProcessResponse();
+      $reflector = new \ReflectionClass('PayXpert\Connect2Pay\AliPayDirectProcessResponse');
+      self::copyScalarProperties($reflector->getProperties(), $dataJson, $response);
+
+      // Transaction information
+      if (isset($dataJson->transactionInfo)) {
+        $response->transactionInfo = TransactionAttempt::getFromJson($dataJson->transactionInfo);
+      }
+    }
+
+    return $response;
+  }
+}
+
+class ExportTransactionsRequest {
+
+  /* ~~ */
+  public $apiVersion;
+  public $startTime;
+  public $endTime;
+  public $operation;
+  public $paymentMethod;
+  public $paymentNetwork;
+  public $transactionResultCode;
+
+  public function setApiVersion($apiVersion) {
+    $this->apiVersion = $apiVersion;
+    return $this;
+  }
+
+  public function setStartTime($startTime) {
+    $this->startTime = $startTime;
+    return $this;
+  }
+
+  public function setEndTime($endTime) {
+    $this->endTime = $endTime;
+    return $this;
+  }
+
+  public function setOperation($operation) {
+    $this->operation = $operation;
+    return $this;
+  }
+
+  public function setPaymentMethod($paymentMethod) {
+    $this->paymentMethod = $paymentMethod;
+    return $this;
+  }
+
+  public function setPaymentNetwork($paymentNetwork) {
+    $this->paymentNetwork = $paymentNetwork;
+    return $this;
+  }
+
+  public function setTransactionResultCode($transactionResultCode) {
+    $this->transactionResultCode = $transactionResultCode;
+    return $this;
+  }
+
+  public function toParamsArray() {
+    $array = array();
+
+    foreach ($this as $key => $value) {
+      if ($value !== NULL) {
+        $array[$key] = $value;
+      }
+    }
+
+    return $array;
+  }
+
+}
+
+class ExportTransactionsResponse extends Container {
+
+  private $transactions;
+
+  public function getTransactions() {
+    return $this->transactions;
+  }
+
+  public function setTransactions($transactions) {
+    $this->transactions = $transactions;
+    return $this;
+  }
+
+  public static function getFromJson($dataJson) {
+    $response = null;
+
+    if ($dataJson != null && is_object($dataJson)) {
+
+      $response = new ExportTransactionsResponse();
+      $response->transactions = array();
+
+      if (isset($dataJson->transactions) && is_array($dataJson->transactions)) {
+        foreach ($dataJson->transactions as $transactionJson) {
+          $response->transactions[] = TransactionAttempt::getFromJson($transactionJson);
+        }
+      }
+    }
+
+    return $response;
+  }
+
+}
+
 /**
  * Helper to manipulate amount in different currencies.
  * Permits to convert amount between different currencies
  * and get rates in real time from Yahoo Web service.
- *
- * @author Jérôme Schell <jsh@payxpert.com>
- * @copyright 2011-2015 Payxpert
- *
  */
 class Connect2PayCurrencyHelper {
   // The base address to fetch currency rates
-  private static $YAHOO_SERVICE_URL = "http://download.finance.yahoo.com/d/quotes.csv";
+  private static $APIIO_SERVICE_URL = 'http://api.fixer.io/';
 
   // Optional proxy to use for outgoing request
   private static $proxy_host = null;
@@ -2097,66 +5279,26 @@ class Connect2PayCurrencyHelper {
   private static $proxy_username = null;
   private static $proxy_password = null;
   private static $currencies = array( /* */
-      "AUD" => array(
-          "currency" => "Australian Dollar",
-          "code" => "036",
-          "symbol" => "$"
-      ),
-      "CAD" => array(
-          "currency" => "Canadian Dollar",
-          "code" => "124",
-          "symbol" => "$"
-      ),
-      "CHF" => array(
-          "currency" => "Swiss Franc",
-          "code" => "756",
-          "symbol" => "CHF"
-      ),
-      "DKK" => array(
-          "currency" => "Danish Krone",
-          "code" => "208",
-          "symbol" => "kr"
-      ),
-      "EUR" => array(
-          "currency" => "Euro",
-          "code" => "978",
-          "symbol" => "€"
-      ),
-      "GBP" => array(
-          "currency" => "Pound Sterling",
-          "code" => "826",
-          "symbol" => "£"
-      ),
-      "HKD" => array(
-          "currency" => "Hong Kong Dollar",
-          "code" => "344",
-          "symbol" => "$"
-      ),
-      "JPY" => array(
-          "currency" => "Yen",
-          "code" => "392",
-          "symbol" => "¥"
-      ),
-      "MXN" => array(
-          "currency" => "Mexican Peso",
-          "code" => "484",
-          "symbol" => "$"
-      ),
-      "NOK" => array(
-          "currency" => "Norwegian Krone",
-          "code" => "578",
-          "symbol" => "kr"
-      ),
-      "SEK" => array(
-          "currency" => "Swedish Krona",
-          "code" => "752",
-          "symbol" => "kr"
-      ),
-      "USD" => array(
-          "currency" => "US Dollar",
-          "code" => "840",
-          "symbol" => "$"
-      ) /* */
+      "AUD" => array("currency" => "Australian Dollar", "code" => "036", "symbol" => "$"),
+      "CAD" => array("currency" => "Canadian Dollar", "code" => "124", "symbol" => "$"),
+      "CHF" => array("currency" => "Swiss Franc", "code" => "756", "symbol" => "CHF"),
+      "CNY" => array("currency" => "Chinese yuan", "code" => "156", "symbol" => "¥"),
+      "DKK" => array("currency" => "Danish Krone", "code" => "208", "symbol" => "kr"),
+      "EUR" => array("currency" => "Euro", "code" => "978", "symbol" => "€"),
+      "GBP" => array("currency" => "Pound Sterling", "code" => "826", "symbol" => "£"),
+      "HKD" => array("currency" => "Hong Kong Dollar", "code" => "344", "symbol" => "$"),
+      "JPY" => array("currency" => "Yen", "code" => "392", "symbol" => "¥"),
+      "MAD" => array("currency" => "Moroccan dirham", "code" => "504", "symbol" => "MAD"),
+      "MXN" => array("currency" => "Mexican Peso", "code" => "484", "symbol" => "$"),
+      "NOK" => array("currency" => "Norwegian Krone", "code" => "578", "symbol" => "kr"),
+      "PHP" => array("currency" => "Philippine peso", "code" => "608", "symbol" => "₱"),
+      "SEK" => array("currency" => "Swedish Krona", "code" => "752", "symbol" => "kr"),
+      "USD" => array("currency" => "US Dollar", "code" => "840", "symbol" => "$"),
+      "RUB" => array("currency" => "Russian ruble", "code" => "643", "symbol" => "RUB"),
+      "SGD" => array("currency" => "Singapore dollar", "code" => "702", "symbol" => "SGD"),
+      "PLN" => array("currency" => "Polish zloty", "code" => "985", "symbol" => "zł"),
+      "TWD" => array("currency" => "New Taiwan dollar", "code" => "901", "symbol" => "NT$") /*
+                                                                                             */
   );
 
   /**
@@ -2192,7 +5334,7 @@ class Connect2PayCurrencyHelper {
    *
    * @param string $code
    *          The numeric code to look for
-   * @return The alphabetic code (like EUR or USD) or null if not found.
+   * @return string The alphabetic code (like EUR or USD) or null if not found.
    */
   public static function getISO4217CurrencyFromCode($code) {
     foreach (Connect2PayCurrencyHelper::$currencies as $currency => $data) {
@@ -2209,7 +5351,7 @@ class Connect2PayCurrencyHelper {
    *
    * @param string $currency
    *          The currency to look for
-   * @return The ISO4217 code or null if not found
+   * @return string The ISO4217 code or null if not found
    */
   public static function getISO4217CurrencyCode($currency) {
     return (array_key_exists($currency, Connect2PayCurrencyHelper::$currencies)) ? Connect2PayCurrencyHelper::$currencies[$currency]["code"] : null;
@@ -2220,7 +5362,7 @@ class Connect2PayCurrencyHelper {
    *
    * @param string $currency
    *          The currency to look for
-   * @return The currency symbol or null if not found
+   * @return string The currency symbol or null if not found
    */
   public static function getCurrencySymbol($currency) {
     return (array_key_exists($currency, Connect2PayCurrencyHelper::$currencies)) ? Connect2PayCurrencyHelper::$currencies[$currency]["symbol"] : null;
@@ -2231,7 +5373,7 @@ class Connect2PayCurrencyHelper {
    *
    * @param string $currency
    *          The currency to look for
-   * @return The currency name or null if not found
+   * @return string The currency name or null if not found
    */
   public static function getCurrencyName($currency) {
     return (array_key_exists($currency, Connect2PayCurrencyHelper::$currencies)) ? Connect2PayCurrencyHelper::$currencies[$currency]["currency"] : null;
@@ -2252,7 +5394,7 @@ class Connect2PayCurrencyHelper {
     }
 
     // Build the request URL
-    $url = Connect2PayCurrencyHelper::$YAHOO_SERVICE_URL . "?s=" . $from . $to . "=X&f=l1&e=.csv";
+    $url = Connect2PayCurrencyHelper::$APIIO_SERVICE_URL . date("Y-m-d") . "?base=" . $from . "&symbols=" . $to;
 
     // Do the request
     $curl = curl_init($url);
@@ -2264,17 +5406,23 @@ class Connect2PayCurrencyHelper {
 
       if (Connect2PayCurrencyHelper::$proxy_username != null && Connect2PayCurrencyHelper::$proxy_password != null) {
         curl_setopt($curl, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
-        curl_setopt($curl, CURLOPT_PROXYUSERPWD, Connect2PayCurrencyHelper::$proxy_username . ":" . Connect2PayCurrencyHelper::$proxy_password);
+        curl_setopt($curl, CURLOPT_PROXYUSERPWD,
+            Connect2PayCurrencyHelper::$proxy_username . ":" . Connect2PayCurrencyHelper::$proxy_password);
       }
     }
 
-    $csv = trim(curl_exec($curl));
+    $json = trim(curl_exec($curl));
     $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
 
-    // Parse the CSV, we should only have a number, check this
-    if ($httpCode == 200 && preg_match('/^[0-9.]+$/', $csv)) {
-      return $csv;
+    if ($httpCode == 200) {
+      // Parse the CSV, we should only have a number, check this
+      $obj = json_decode($json, true);
+
+      if (is_array($obj) && array_key_exists("rates", $obj) && array_key_exists($to, $obj['rates']) &&
+          preg_match('/^[0-9.]+$/', $obj['rates'][$to])) {
+        return $obj['rates'][$to];
+      }
     }
 
     return null;
@@ -2291,7 +5439,7 @@ class Connect2PayCurrencyHelper {
    *          The destination currency
    * @param boolean $cent
    *          Specifies if the amount is in cent (default true)
-   * @return The converted amount or null in case of error
+   * @return integer The converted amount or null in case of error
    */
   public static function convert($amount, $from, $to, $cent = true) {
     // Get the conversion rate
@@ -2315,14 +5463,6 @@ class Connect2PayCurrencyHelper {
 
 /**
  * Validation class
- *
- * PHP dependencies:
- * PHP >= 5.2.0
- *
- * @version 1.0 (20120531)
- * @author Yann Finck <yann@iiiaaa.fr>
- * @copyright 2012-2015 Payxpert
- *
  */
 class C2PValidate {
 
@@ -2335,7 +5475,7 @@ class C2PValidate {
    */
   static public function isEmail($email) {
     return C2PValidate::isEmpty($email) or
-         preg_match('/^[a-z0-9!#$%&\'*+\/=?^`{}|~_-]+[.a-z0-9!#$%&\'*+\/=?^`{}|~_-]*@[a-z0-9]+[._a-z0-9-]*\.[a-z0-9]+$/ui', $email);
+        preg_match('/^[a-z0-9!#$%&\'*+\/=?^`{}|~_-]+[.a-z0-9!#$%&\'*+\/=?^`{}|~_-]*@[a-z0-9]+[._a-z0-9-]*\.[a-z0-9]+$/ui', $email);
   }
 
   /**
@@ -2523,6 +5663,17 @@ class C2PValidate {
   }
 
   /**
+   * Check for an numeric string validity (unsigned)
+   *
+   * @param string $value
+   *          Numeric string to validate
+   * @return boolean Validity is ok or not
+   */
+  static public function isNumeric($value) {
+    return (preg_match('#^[0-9]+$#', (string) $value) === 1);
+  }
+
+  /**
    * Check url valdity (disallowed empty string)
    *
    * @param string $url
@@ -2571,12 +5722,48 @@ class C2PValidate {
   /**
    * Payment Mean validity
    *
-   * @param string $payment
+   * @param string $paymentMethod
    *          Payment Mean to validate
    * @return boolean Validity is ok or not
    */
-  static public function isPayment($payment) {
-    return ((string) $payment == Connect2PayClient::_PAYMENT_TYPE_CREDITCARD || (string) $payment == Connect2PayClient::_PAYMENT_TYPE_TODITOCASH);
+  static public function isPaymentMethod($paymentMethod) {
+    return ((string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_CREDITCARD ||
+        (string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_TODITOCASH ||
+        (string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_BANKTRANSFER ||
+        (string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_DIRECTDEBIT ||
+        (string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_WECHAT ||
+        (string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_LINE ||
+        (string) $paymentMethod == Connect2PayClient::PAYMENT_METHOD_ALIPAY);
+  }
+
+  /**
+   * Payment network validity
+   *
+   * @param string $paymentNetwork
+   *          Payment Network to validate
+   * @return boolean Validity is ok or not
+   */
+  static public function isPaymentNetwork($paymentNetwork) {
+    return ((string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_SOFORT ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_PRZELEWY24 ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_IDEAL ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_GIROPAY ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_EPS ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_POLI ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_DRAGONPAY ||
+        (string) $paymentNetwork == Connect2PayClient::PAYMENT_NETWORK_TRUSTLY);
+  }
+
+  /**
+   * Operation validity
+   *
+   * @param string $operation
+   *          Operation to validate
+   * @return boolean Validity is ok or not
+   */
+  static public function isOperation($operation) {
+    return ((string) $operation == Connect2PayClient::OPERATION_TYPE_SALE ||
+        (string) $operation == Connect2PayClient::OPERATION_TYPE_AUTHORIZE);
   }
 
   /**
@@ -2587,8 +5774,10 @@ class C2PValidate {
    * @return boolean Validity is ok or not
    */
   static public function isPaymentMode($paymentMode) {
-    return ((string) $paymentMode == Connect2PayClient::_PAYMENT_MODE_SINGLE || (string) $paymentMode == Connect2PayClient::_PAYMENT_MODE_ONSHIPPING ||
-         (string) $paymentMode == Connect2PayClient::_PAYMENT_MODE_RECURRENT || (string) $paymentMode == Connect2PayClient::_PAYMENT_MODE_INSTALMENTS);
+    return ((string) $paymentMode == Connect2PayClient::PAYMENT_MODE_SINGLE ||
+        (string) $paymentMode == Connect2PayClient::PAYMENT_MODE_ONSHIPPING ||
+        (string) $paymentMode == Connect2PayClient::PAYMENT_MODE_RECURRENT ||
+        (string) $paymentMode == Connect2PayClient::PAYMENT_MODE_INSTALMENTS);
   }
 
   /**
@@ -2599,10 +5788,11 @@ class C2PValidate {
    * @return boolean Validity is ok or not
    */
   static public function isSubscriptionType($subscriptionType) {
-    return ((string) $subscriptionType == Connect2PayClient::_SUBSCRIPTION_TYPE_NORMAL ||
-         (string) $subscriptionType == Connect2PayClient::_SUBSCRIPTION_TYPE_INFINITE ||
-         (string) $subscriptionType == Connect2PayClient::_SUBSCRIPTION_TYPE_ONETIME ||
-         (string) $subscriptionType == Connect2PayClient::_SUBSCRIPTION_TYPE_LIFETIME);
+    return ((string) $subscriptionType == Connect2PayClient::SUBSCRIPTION_TYPE_NORMAL ||
+        (string) $subscriptionType == Connect2PayClient::SUBSCRIPTION_TYPE_PARTPAYMENT ||
+        (string) $subscriptionType == Connect2PayClient::SUBSCRIPTION_TYPE_INFINITE ||
+        (string) $subscriptionType == Connect2PayClient::SUBSCRIPTION_TYPE_ONETIME ||
+        (string) $subscriptionType == Connect2PayClient::SUBSCRIPTION_TYPE_LIFETIME);
   }
 
   /**

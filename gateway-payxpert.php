@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce PayXpert Gateway
  * Plugin URI: http://www.payxpert.com
  * Description: WooCommerce PayXpert Gateway plugin
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: PayXpert
  * Author URI: http://www.payxpert.com
  */

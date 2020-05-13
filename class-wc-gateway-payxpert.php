@@ -26,6 +26,8 @@ if (!defined('ABSPATH')) {
  */
 include_once ('includes/Connect2PayClient.php');
 
+use PayXpert\Connect2Pay\Connect2PayClient;
+
 class WC_Gateway_PayXpert extends WC_Payment_Gateway {
 
   /** @var boolean Whether or not logging is enabled */
@@ -334,7 +336,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     }
 
     // prepare API
-    if ($c2pClient->prepareTransaction() == false) {
+    if ($c2pClient->preparePayment() == false) {
       $message = "can't prepare transaction - " . $c2pClient->getClientErrorMessage();
       $this->log($message);
       echo $message;
