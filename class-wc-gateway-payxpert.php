@@ -316,13 +316,17 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
     $c2pClient->setOrderDescription(substr('Invoice:' . $order->get_id(), 0, 255));
     $c2pClient->setCurrency($order->get_currency());
 
-    $total = number_format($order->order_total * 100, 0, '.', '');
+    $total = number_format($order->get_total() * 100, 0, '.', '');
     $c2pClient->setAmount($total);
     $c2pClient->setPaymentMode(Connect2PayClient::_PAYMENT_MODE_SINGLE);
     $c2pClient->setPaymentType(Connect2PayClient::_PAYMENT_TYPE_CREDITCARD);
 
     $c2pClient->setCtrlCallbackURL(WC()->api_request_url('WC_Gateway_PayXpert'));
     $c2pClient->setCtrlRedirectURL($this->relay_response_url . '&order_id=' . $order_id);
+
+    if ($this->is_iframe_on()) {
+      $c2pClient->setThemeID("373");
+    }
 
     // Merchant notifications
     if (isset($this->merchant_notifications) && $this->merchant_notifications != null) {
@@ -382,28 +386,25 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
 
     $transactionId = $order->get_transaction_id();
 
-    include_once ('includes/GatewayClient.php');
+    $c2pClient = new Connect2PayClient($this->connect2_url, $this->originator_id, $this->password);
 
-    $client = new GatewayClient($this->api_url, $this->originator_id, $this->password);
-
-    $transaction = $client->newTransaction('Refund');
     if ($amount <= 0) {
-      $amount = $order->order_total;
+      $amount = $order->get_total();
     }
 
     $total = number_format($amount * 100, 0, '.', '');
 
-    $transaction->setReferralInformation($transactionId, $total);
+    $status = $c2pClient->refundTransaction($transactionId, $total);
 
-    $response = $transaction->send();
-
-    if ('000' === $response->errorCode) {
-      $this->log("Refund Successful: Transaction ID {$response->transactionID}");
-      $order->add_order_note(sprintf(__('Refunded %s - Refund ID: %s', 'payxpert'), $amount, $response->transactionID));
-      return true;
+    if ($status != null && $status->getCode() != null) {
+      if ($status->getCode() === '000') {
+        $this->log("Refund Successful: Transaction ID {$status->getTransactionID()}");
+        $order->add_order_note(sprintf(__('Refunded %s - Refund ID: %s', 'payxpert'), $amount, $status->getTransactionID()));
+        return true;
+      }
     } else {
       $this->log(
-          "Refund Failed: Transaction ID {$response->transactionID}, Error {$response->errorCode} with message {$response->errorMessage}");
+          "Refund Failed: Transaction ID {$status->getTransactionID()}, Error {$status->getErrorCode()} with message {$status->getMessage()}");
       return false;
     }
   }
@@ -427,7 +428,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
 
     $c2pClient = new Connect2PayClient($this->connect2_url, $this->originator_id, $this->password);
 
-    if ($_POST["data"] != null) {
+    if (isset($_POST["data"]) && $_POST["data"] != null) {
 
       $data = $_POST["data"];
       $order_id = $_GET['order_id'];
@@ -444,7 +445,8 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
 
         // errorCode = 000 => payment is successful
         if ($errorCode == '000') {
-          $transactionId = $status->getTransactionID();
+          $transaction = $status->getLastTransactionAttempt();
+          $transactionId = $transaction->getTransactionID();
           $message = "Successful transaction by customer redirection. Transaction Id: " . $transactionId;
           $this->payment_complete($order, $transactionId, $message, 'payxpert');
           $order->update_status('completed', $message);
@@ -469,7 +471,8 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
         // get the Error code
         $errorCode = $status->getErrorCode();
         $errorMessage = $status->getErrorMessage();
-        $transactionId = $status->getTransactionID();
+        $transaction = $status->getLastTransactionAttempt();
+        $transactionId = $transaction->getTransactionID();
 
         $order_id = $status->getOrderID();
 
@@ -478,7 +481,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
 
         $amount = number_format($status->getAmount() / 100, 2, '.', '');
 
-        $data = compact("errorCode", "errorMessage", "transactionId", "invoiceId", "amount");
+        $data = compact("errorCode", "errorMessage", "transactionId", "order_id", "amount");
 
         $payxpert_merchant_token = get_post_meta($order_id, '_payxpert_merchant_token', true);
 
@@ -500,7 +503,7 @@ class WC_Gateway_PayXpert extends WC_Payment_Gateway {
         } else {
           // We do not update the status of the transaction, we just log the
           // message
-          $message = "Error. Invalid token " . $merchantToken . " for order " . $order->id . " in callback from " . $_SERVER["REMOTE_ADDR"];
+          $message = "Error. Invalid token " . $merchantToken . " for order " . $order->get_id() . " in callback from " . $_SERVER["REMOTE_ADDR"];
           $this->log($message);
         }
 
