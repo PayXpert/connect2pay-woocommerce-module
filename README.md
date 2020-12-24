@@ -1,5 +1,5 @@
 # WooCommerce PayXpert Payment Module
-### Version for WooCommerce 3.7 to 4.3
+### Version for WooCommerce 3.7 to 4.8
 
 The author of this plugin can NEVER be held responsible for this software.
 There is no warranty what so ever. You accept this by using this software.
