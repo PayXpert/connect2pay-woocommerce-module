@@ -17,11 +17,18 @@ There is no warranty what so ever. You accept this by using this software.
 ## Installation
 1. Install the plugin like you always install plugins, either by uploading it via FTP or by using the "Add Plugin" function of WordPress.
 
-2. Activate the plugin at the plugin administration page
+2. Go to the main directory of the plugin and run:
 
-3. Go the that WooCommerce Settings, click on Checkout, you will see a new Checkout Options: PayXpert
+```
+php composer.phar install
 
-4. Click on the PayXpert Checkout Options, enable the gateway and fill the information provided by PayXpert
+```
+
+3. Activate the plugin at the plugin administration page
+
+4. Go the that WooCommerce Settings, click on Checkout, you will see a new Checkout Options: PayXpert
+
+5. Click on the PayXpert Checkout Options, enable the gateway and fill the information provided by PayXpert
 
    
 ## Support
