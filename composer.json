@@ -1,0 +1,15 @@
+{
+    "name": "payxpert/connect2pay-woocommerce-module",
+    "description": "PayXpert payment module for WooCommerce",
+    "type": "project",
+    "require": {
+        "payxpert/connect2pay": "2.70.0"
+    },
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "PayXpert Team",
+            "email": "support@payxpert.com"
+        }
+    ]
+}
