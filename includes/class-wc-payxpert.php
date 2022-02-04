@@ -9,6 +9,7 @@ use PayXpert\Connect2Pay\containers\Order;
 use PayXpert\Connect2Pay\containers\Shipping;
 use PayXpert\Connect2Pay\containers\Shopper;
 use PayXpert\Connect2Pay\containers\Account;
+use PayXpert\Connect2Pay\containers\constant\OrderType;
 use PayXpert\Connect2Pay\containers\constant\OrderShippingType;
 use PayXpert\Connect2Pay\containers\constant\PaymentMethod;
 use PayXpert\Connect2Pay\containers\constant\PaymentMode;
@@ -214,6 +215,7 @@ class PayXpertMain
     
         // Order informations
         $order->setId(substr($orderdetails->get_id(), 0, 100));
+        $order->setType(OrderType::GOODS_SERVICE);
         $order->setShippingType(OrderShippingType::DIGITAL_GOODS);
         $order->setDescription(substr('Invoice:' . $orderdetails->get_id(), 0, 255));
           
