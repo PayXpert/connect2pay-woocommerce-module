@@ -5,6 +5,7 @@ The author of this plugin can NEVER be held responsible for this software.
 There is no warranty what so ever. You accept this by using this software.
 
 ## Changelog
+* 1.2.1 - Added order.type required parameter
 * 1.2.0 - Added Seamless Checkout, WeChat Pay, Alipay method
 * 1.1.4 - Removed direct access to properties, fixed iframe, refund features
 * 1.1.3 - Updated Connect2Pay client, removed deprecated functions
