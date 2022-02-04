@@ -467,6 +467,7 @@ class PayXpertMain
 
         $getuniqid = uniqid();
         $order->setId($getuniqid);
+        $order->setType(OrderType::GOODS_SERVICE);
         $order->setShippingType(OrderShippingType::DIGITAL_GOODS);
         $order->setDescription("Payment");
 
