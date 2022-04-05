@@ -418,36 +418,27 @@ class PayXpertMain
          
         $ccy = get_option('woocommerce_currency');
         $order_price_cents = $carttotal * 100;
-        $shopperfirstname = 'John';
-        $shopperlastname = 'Doe';
-        $shoppercountry = 'US';
-        $shopperstate = 'NY';
-        $shoppercity = 'New York';
-        $shopperaddress = 'Debit Street, 45';
-        $shopperpostcode = '3456TRG';
-        $shopperphone = '12345678';
-        $shopperemail = 'shopper@example.com';
         if (isset($allpostdata)) {
-        $postdata = $allpostdata;
-        $postdata = explode("&",$postdata);
-        $firstname = explode("=",$postdata[0]);    
-        $lastname = explode("=",$postdata[1]);    
-        $country = explode("=",$postdata[3]);    
-        $address = explode("=",$postdata[4]);    
-        $state = explode("=",$postdata[7]);    
-        $city = explode("=",$postdata[6]);    
-        $postcode = explode("=",$postdata[8]);    
-        $phone = explode("=",$postdata[9]);    
-        $email = explode("=",$postdata[10]);    
-        $shopperfirstname = $firstname[1] ? $firstname[1] : 'John';
-        $shopperlastname = $lastname[1] ? $lastname[1] : 'Doe';
-        $shoppercountry = $country[1] ? $country[1] : 'US';
-        $shopperstate = $state[1] ? $state[1] : 'NY';
-        $shoppercity = $city[1] ? $city[1] : 'New York';
-        $shopperaddress = $address[1] ? $address[1] : 'Debit Street, 45';
-        $shopperpostcode = $postcode[1] ? $postcode[1] : '3456TRG';
-        $shopperphone = $phone[1] ? $phone[1] : '12345678';
-        $shopperemail = str_replace("%40", "@",$email[1]) ? str_replace("%40", "@",$email[1]) : 'shopper@example.com';
+            $postdata = explode("&",$allpostdata);
+            $firstname = explode("=",$postdata[0]);
+            $lastname = explode("=",$postdata[1]);
+            $country = explode("=",$postdata[3]);
+            $address = explode("=",$postdata[4]);
+            $state = explode("=",$postdata[8]);
+            $city = explode("=",$postdata[7]);
+            $postcode = explode("=",$postdata[6]);
+            $phone = explode("=",$postdata[9]);
+            $email = explode("=",$postdata[10]);
+
+            $shopperfirstname = $firstname[1] ? urldecode($firstname[1]) : 'John';
+            $shopperlastname = $lastname[1] ? urldecode($lastname[1]) : 'Doe';
+            $shoppercountry = $country[1] ? urldecode($country[1]) : 'US';
+            $shopperstate = $state[1] ? urldecode($state[1]) : 'NY';
+            $shoppercity = $city[1] ? $city[1] : 'New York';
+            $shopperaddress = $address[1] ? urldecode($address[1]) : 'Debit Street, 45';
+            $shopperpostcode = $postcode[1] ? urldecode($postcode[1]) : '3456TRG';
+            $shopperphone = $phone[1] ? urldecode($phone[1]) : '12345678';
+            $shopperemail = str_replace("%40", "@",$email[1]) ? str_replace("%40", "@",$email[1]) : 'shopper@example.com';
         }
 
         $c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getpassword());
