@@ -411,7 +411,8 @@ class PayXpertMain
         {
             "externalPaymentButton":"place_order",
             "payButtonText": "'.$order_button_text.'",
-            "onPaymentResult": "callbackreturn"
+            "onPaymentResult": "callbackreturn",
+            "hideCardHolderName":"true"
         }</script></div>';
 
         echo '<div id="error-message-seamless">Please Fill up all required Field to Make Payment with Credit Card.</div>';
