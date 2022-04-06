@@ -431,15 +431,15 @@ class PayXpertMain
             $phone = explode("=",$postdata[9]);
             $email = explode("=",$postdata[10]);
 
-            $shopperfirstname = $firstname[1] ? urldecode($firstname[1]) : 'John';
-            $shopperlastname = $lastname[1] ? urldecode($lastname[1]) : 'Doe';
-            $shoppercountry = $country[1] ? urldecode($country[1]) : 'US';
-            $shopperstate = $state[1] ? urldecode($state[1]) : 'NY';
-            $shoppercity = $city[1] ? urldecode($city[1]) : 'New York';
-            $shopperaddress = $address[1] ? urldecode($address[1]) : 'Debit Street, 45';
-            $shopperpostcode = $postcode[1] ? urldecode($postcode[1]) : '3456TRG';
-            $shopperphone = $phone[1] ? urldecode($phone[1]) : '12345678';
-            $shopperemail = $email[1] ? urldecode($email[1]) : 'shopper@example.com';
+            $shopperfirstname = $firstname[1] ? urldecode($firstname[1]) : "";
+            $shopperlastname = $lastname[1] ? urldecode($lastname[1]) : "";
+            $shoppercountry = $country[1] ? urldecode($country[1]) : "";
+            $shopperstate = "";
+            $shoppercity = $city[1] ? urldecode($city[1]) : "";
+            $shopperaddress = $address[1] ? urldecode($address[1]) : "";
+            $shopperpostcode = $postcode[1] ? urldecode($postcode[1]) : "";
+            $shopperphone = $phone[1] ? urldecode($phone[1]) : "";
+            $shopperemail = $email[1] ? urldecode($email[1]) : "";
         }
 
         $c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getpassword());
