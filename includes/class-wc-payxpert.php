@@ -435,11 +435,11 @@ class PayXpertMain
             $shopperlastname = $lastname[1] ? urldecode($lastname[1]) : 'Doe';
             $shoppercountry = $country[1] ? urldecode($country[1]) : 'US';
             $shopperstate = $state[1] ? urldecode($state[1]) : 'NY';
-            $shoppercity = $city[1] ? $city[1] : 'New York';
+            $shoppercity = $city[1] ? urldecode($city[1]) : 'New York';
             $shopperaddress = $address[1] ? urldecode($address[1]) : 'Debit Street, 45';
             $shopperpostcode = $postcode[1] ? urldecode($postcode[1]) : '3456TRG';
             $shopperphone = $phone[1] ? urldecode($phone[1]) : '12345678';
-            $shopperemail = str_replace("%40", "@",$email[1]) ? str_replace("%40", "@",$email[1]) : 'shopper@example.com';
+            $shopperemail = $email[1] ? urldecode($email[1]) : 'shopper@example.com';
         }
 
         $c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getpassword());

@@ -130,7 +130,7 @@ final class PayxpertMainClass
                     $("#payxpert").remove();
                     var sNew = document.createElement("script");
                     sNew.async = true;
-                    sNew.src = "https://connect2.payxpert.com/payment/"+ gettokken  +"/connect2pay-seamless-v1.4.0.js";
+                    sNew.src = "https://connect2.payxpert.com/payment/"+ gettokken  +"/connect2pay-seamless-v1.4.8.js";
                     sNew.setAttribute('data-mount-in', "#payment-container");
                     sNew.setAttribute('id', "payxpert");
                     sNew.setAttribute('integrity', "sha....");
