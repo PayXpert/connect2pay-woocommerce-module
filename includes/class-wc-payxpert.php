@@ -420,26 +420,17 @@ class PayXpertMain
         $ccy = get_option('woocommerce_currency');
         $order_price_cents = $carttotal * 100;
         if (isset($allpostdata)) {
-            $postdata = explode("&",$allpostdata);
-            $firstname = explode("=",$postdata[0]);
-            $lastname = explode("=",$postdata[1]);
-            $country = explode("=",$postdata[3]);
-            $address = explode("=",$postdata[4]);
-            $state = explode("=",$postdata[8]);
-            $city = explode("=",$postdata[7]);
-            $postcode = explode("=",$postdata[6]);
-            $phone = explode("=",$postdata[9]);
-            $email = explode("=",$postdata[10]);
+            parse_str($allpostdata, $postdata);
 
-            $shopperfirstname = $firstname[1] ? urldecode($firstname[1]) : "";
-            $shopperlastname = $lastname[1] ? urldecode($lastname[1]) : "";
-            $shoppercountry = $country[1] ? urldecode($country[1]) : "";
-            $shopperstate = "";
-            $shoppercity = $city[1] ? urldecode($city[1]) : "";
-            $shopperaddress = $address[1] ? urldecode($address[1]) : "";
-            $shopperpostcode = $postcode[1] ? urldecode($postcode[1]) : "";
-            $shopperphone = $phone[1] ? urldecode($phone[1]) : "";
-            $shopperemail = $email[1] ? urldecode($email[1]) : "";
+            $shopperfirstname = $postdata["billing_first_name"] ? $postdata["billing_first_name"] : "";
+            $shopperlastname = $postdata["billing_last_name"] ? $postdata["billing_last_name"] : "";
+            $shoppercountry = $postdata["billing_country"] ? $postdata["billing_country"] : "";
+            $shopperstate = $postdata["billing_state"] ? $postdata["billing_state"] : " ";
+            $shoppercity = $postdata["billing_city"] ? $postdata["billing_city"] : "";
+            $shopperaddress = $postdata["billing_address_1"] ? $postdata["billing_address_1"] : "";
+            $shopperpostcode = $postdata["billing_postcode"] ? $postdata["billing_postcode"] : "";
+            $shopperphone = $postdata["billing_phone"] ? $postdata["billing_phone"] : "";
+            $shopperemail = $postdata["billing_email"] ? $postdata["billing_email"] : "";
         }
 
         $c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getpassword());
