@@ -5,6 +5,7 @@ The author of this plugin can NEVER be held responsible for this software.
 There is no warranty what so ever. You accept this by using this software.
 
 ## Changelog
+* 1.2.4 - Removed "billing state" from required parameters
 * 1.2.3 - Proper parse of checkout form string
 * 1.2.2 - Fixed bad encoding
 * 1.2.1 - Added order.type required parameter

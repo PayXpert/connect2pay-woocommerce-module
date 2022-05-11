@@ -138,7 +138,7 @@ final class PayxpertMainClass
                     var s0 = document.getElementsByTagName('script')[0];
                     s0.parentNode.insertBefore(sNew, s0);
                     
-                    if($("#billing_first_name").val().length === 0 || $("#billing_first_name").val().length === 0 || $("#billing_address_1").val().length === 0 || $("#billing_state").val().length === 0 || $("#billing_country").val().length === 0 || $("#billing_city").val().length === 0 || $("#billing_postcode").val().length === 0 || $("#billing_phone").val().length === 0 || $("#billing_email").val().length === 0){
+                    if($("#billing_first_name").val().length === 0 || $("#billing_first_name").val().length === 0 || $("#billing_address_1").val().length === 0 || $("#billing_country").val().length === 0 || $("#billing_city").val().length === 0 || $("#billing_postcode").val().length === 0 || $("#billing_phone").val().length === 0 || $("#billing_email").val().length === 0){
                         $("#payment-container").hide();
                         $("#error-message-seamless").show();
                     }else{
