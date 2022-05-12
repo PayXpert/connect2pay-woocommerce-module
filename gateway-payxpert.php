@@ -39,52 +39,52 @@ require_once "includes/class-wc-payxpert.php";
  */
 final class PayxpertMainClass
 {
-	// Class construction
-	private function __construct()
-	{
-		$this->define_function();
+    // Class construction
+    private function __construct()
+    {
+        $this->define_function();
 
-		add_action('plugins_loaded', [$this, 'init_plugin']);
-		add_filter('woocommerce_payment_gateways', [$this, 'woocommerce_payxpert_gateway']);
-		add_action('admin_head', [$this, 'redirct_to_another_setting']);
-		add_action( 'wp_footer', [$this, 'payxpert_payment_script_footer']  );
-		add_action('plugins_loaded', [$this, 'woocommerce_payxpert_init'], 0);
-	}
+        add_action('plugins_loaded', [$this, 'init_plugin']);
+        add_filter('woocommerce_payment_gateways', [$this, 'woocommerce_payxpert_gateway']);
+        add_action('admin_head', [$this, 'redirct_to_another_setting']);
+        add_action( 'wp_footer', [$this, 'payxpert_payment_script_footer']  );
+        add_action('plugins_loaded', [$this, 'woocommerce_payxpert_init'], 0);
+    }
 
-	/*
-		Single instence 
-	*/
-	public static function init(){
-		static $instance = false;
+    /*
+        Single instence 
+    */
+    public static function init(){
+        static $instance = false;
 
-		if (!$instance) {
-			$instance = new self();
-		}
+        if (!$instance) {
+            $instance = new self();
+        }
 
-		return $instance;
-	}
+        return $instance;
+    }
 
 
-	public function define_function(){
-		define("PX_FILE", __FILE__);
-		define("PX_PATH", __DIR__);
-		define("PX_URL", plugins_url('', PX_FILE));
-		define("PX_ASSETS", PX_URL.'/assets');
-	}
+    public function define_function(){
+        define("PX_FILE", __FILE__);
+        define("PX_PATH", __DIR__);
+        define("PX_URL", plugins_url('', PX_FILE));
+        define("PX_ASSETS", PX_URL.'/assets');
+    }
 
-	public function init_plugin(){
-		new PayXpertOption();	
+    public function init_plugin(){
+        new PayXpertOption();   
 
-	}
-	
-	public function woocommerce_payxpert_gateway($methods){
-	    $methods[] = 'WC_Gateway_PayXpert_WeChat';
-	    $methods[] = 'WC_Gateway_PayXpert_Alipay';
-	    $methods[] = 'WC_PayXpert_Seamless_Gateway';
+    }
+    
+    public function woocommerce_payxpert_gateway($methods){
+        $methods[] = 'WC_Gateway_PayXpert_WeChat';
+        $methods[] = 'WC_Gateway_PayXpert_Alipay';
+        $methods[] = 'WC_PayXpert_Seamless_Gateway';
         return $methods;
-	}
-	
-	public function redirct_to_another_setting(){
+    }
+    
+    public function redirct_to_another_setting(){
         if(isset($_GET['page']) && isset($_GET['tab']) && isset($_GET['section'])){
             $getoptionurl = get_admin_url(null, "/admin.php?page=wc-settings&tab=checkout&section=payxpert");
             // PayXpert Seamless Option
@@ -126,14 +126,16 @@ final class PayxpertMainClass
             <script type="text/javascript">
             jQuery(document).ready(function( $ ) {
                 $( document.body ).on( 'updated_checkout', function(){
-                    var gettokken = $("#tokenpass").val();  
+                    var gettokken = $("#tokenpass").val();
+                    var version = $("#seamless_version").val();
+                    var hash = $("#seamless_hash").val();
                     $("#payxpert").remove();
                     var sNew = document.createElement("script");
                     sNew.async = true;
-                    sNew.src = "https://connect2.payxpert.com/payment/"+ gettokken  +"/connect2pay-seamless-v1.4.8.js";
+                    sNew.src = "https://connect2.payxpert.com/payment/"+ gettokken  +"/connect2pay-seamless-v" + version + ".js";
                     sNew.setAttribute('data-mount-in', "#payment-container");
                     sNew.setAttribute('id', "payxpert");
-                    sNew.setAttribute('integrity', "sha....");
+                    sNew.setAttribute('integrity', hash);
                     sNew.setAttribute('crossorigin', "anonymous");
                     var s0 = document.getElementsByTagName('script')[0];
                     s0.parentNode.insertBefore(sNew, s0);
@@ -165,7 +167,7 @@ final class PayxpertMainClass
                 
                 // check if all of fill 
                 $(document).on('change', '.woocommerce input', function(){
-                    if($("#billing_first_name").val().length === 0 || $("#billing_first_name").val().length === 0 || $("#billing_address_1").val().length === 0 || $("#billing_state").val().length === 0 || $("#billing_country").val().length === 0 || $("#billing_city").val().length === 0 || $("#billing_postcode").val().length === 0 || $("#billing_phone").val().length === 0 || $("#billing_email").val().length === 0){
+                    if($("#billing_first_name").val().length === 0 || $("#billing_first_name").val().length === 0 || $("#billing_address_1").val().length === 0 || $("#billing_country").val().length === 0 || $("#billing_city").val().length === 0 || $("#billing_postcode").val().length === 0 || $("#billing_phone").val().length === 0 || $("#billing_email").val().length === 0){
                         $("#payment-container").hide();
                         $("#error-message-seamless").show();
                     }else{
@@ -210,7 +212,7 @@ final class PayxpertMainClass
 Initialize the main plugin
 */
 function Payxpert_init(){
-	return PayxpertMainClass::init();
+    return PayxpertMainClass::init();
 }
 
 /*

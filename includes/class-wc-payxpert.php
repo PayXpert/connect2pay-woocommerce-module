@@ -73,6 +73,14 @@ class PayXpertMain
         
         return $ordertextbutton;
 	}
+
+    public function getSeamlessCheckoutVersion(){
+        return get_option('payxpert_seamless_version');
+    }
+
+    public function getSeamlessCheckoutHash(){
+        return get_option('payxpert_seamless_hash');
+    }
 	
 	public function getDebug(){
 	   if(get_option('payxpert_debug') == 'no'){
@@ -489,6 +497,8 @@ class PayXpertMain
     
         echo '<input type="hidden" value="'.$_SESSION['customerToken'].'" id="tokenpass"/>';
         echo '<input type="hidden" value="'.$_SESSION['merchantToken'].'" name="merchantToken"/>';
+        echo '<input type="hidden" value="'.$this->getSeamlessCheckoutVersion() .'" id="seamless_version" name="seamless_version"/>';
+        echo '<input type="hidden" value="'.$this->getSeamlessCheckoutHash().'" id="seamless_hash" name="seamless_hash"/>';
         echo '<input type="hidden" value="" id="transactionId" name="transactionId"/>';
         echo '<input type="hidden" value="" id="paymentId" name="paymentId"/>';
         echo '<input type="hidden" value="" id="paymentstatus" name="paymentstatus"/>';

@@ -5,6 +5,7 @@ The author of this plugin can NEVER be held responsible for this software.
 There is no warranty what so ever. You accept this by using this software.
 
 ## Changelog
+* 1.2.5 - Added flexible field for Seamless Checkout version and integrity hash
 * 1.2.4 - Removed "billing state" from required parameters
 * 1.2.3 - Proper parse of checkout form string
 * 1.2.2 - Fixed bad encoding

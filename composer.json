@@ -1,6 +1,6 @@
 {
     "name": "payxpert/connect2pay-woocommerce-module",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "description": "PayXpert payment module for WooCommerce",
     "type": "project",
     "require": {
