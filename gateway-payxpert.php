@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce PayXpert Gateway
  * Plugin URI: http://www.payxpert.com
  * Description: WooCommerce PayXpert Gateway plugin
- * Version: 1.2.0
+ * Version: 1.2.6
  * Author: PayXpert
  * Author URI: http://www.payxpert.com
  */
@@ -52,7 +52,7 @@ final class PayxpertMainClass
     }
 
     /*
-        Single instence 
+        Single instance
     */
     public static function init(){
         static $instance = false;

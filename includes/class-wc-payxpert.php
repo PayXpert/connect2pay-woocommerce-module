@@ -103,7 +103,11 @@ class PayXpertMain
 	public function merchant_notifications_lang(){
 	    return get_option('payxpert_merchant_notifications_lang');
 	}
-	
+
+    public function getTransactionOperation(){
+        return get_option('payxpert_transaction_operation');
+    }
+
     /**
     * Logging method
     *
@@ -124,7 +128,7 @@ class PayXpertMain
     * @return bool
     */
     public function is_valid_for_use() {
-        // We allow to use the gateway from any where
+        // We allow to use the gateway from anywhere
         return true;
     }
     
@@ -177,7 +181,7 @@ class PayXpertMain
     }
     
     
-    public function payxpert_process_payment($order_id, $type, $returnurl, $returnname){
+    public function payxpert_process_payment($order_id, $type, $returnurl, $returnname) {
         $orderdetails = new WC_Order($order_id);
     
         // init api
@@ -189,10 +193,10 @@ class PayXpertMain
         $order = new Order();
         $shipping = new Shipping();
         if($type == 'ALIPAY'){
-        $prepareRequest->setPaymentMethod(PaymentMethod::ALIPAY);
+          $prepareRequest->setPaymentMethod(PaymentMethod::ALIPAY);
         }
         if($type == 'WECHAT'){
-        $prepareRequest->setPaymentMethod(PaymentMethod::WECHAT);
+          $prepareRequest->setPaymentMethod(PaymentMethod::WECHAT);
         }
        
         $prepareRequest->setPaymentMode(PaymentMode::SINGLE);
@@ -201,9 +205,14 @@ class PayXpertMain
     
         $total = number_format($orderdetails->get_total() * 100, 0, '.', '');
         $prepareRequest->setAmount($total);    
-        
-    
-        // customer informations
+
+        // Transaction Operation
+        $transactionOperation = $this->getTransactionOperation();
+        if (!empty($transactionOperation) && in_array(strtolower($transactionOperation), array('sale', 'authorize'))) {
+            $prepareRequest->setOperation($transactionOperation);
+        }
+
+            // customer informations
         $shopper->setId($orderdetails->get_customer_id());
         $shopper->setFirstName(substr($orderdetails->get_billing_first_name(), 0, 35))->setLastName(substr($orderdetails->get_billing_last_name(), 0, 35));
         $shopper->setAddress1(substr(trim($orderdetails->get_billing_address_1() . ' ' . $orderdetails->get_billing_address_2()), 0, 255));
@@ -296,7 +305,7 @@ class PayXpertMain
     
                 // errorCode = 000 => payment is successful
                 if ($errorCode == '000') {
-                    $transaction = $status->getLastTransactionAttempt();
+                    $transaction = $status->getLastInitialTransactionAttempt();
                     $transactionId = $transaction->getTransactionID();
                     $message = "Successful transaction by customer redirection. Transaction Id: " . $transactionId;
                     $this->payment_complete($order, $transactionId, $message, 'payxpert');
@@ -340,10 +349,9 @@ class PayXpertMain
             if ($payxpert_merchant_token == $merchantToken) {
               // errorCode = 000 transaction is successfull
               if ($errorCode == '000') {
-    
                 $message = "Successful transaction Callback received with transaction Id: " . $transactionId;
                 $this->payment_complete($order, $transactionId, $message, 'payxpert');
-                $order->update_status('completed', $message);
+                $this->setOrderStatus($order, $transaction->getOperation(), $message);
                 $this->log($message);
               } else {
     
@@ -370,7 +378,16 @@ class PayXpertMain
           }
         }
     }
-    
+
+    private function setOrderStatus($order, $operation, $message) {
+        if (in_array(strtolower($operation), array('sale', 'authorize'))) {
+            $status = strtolower($operation) == 'sale' ? 'completed' : 'on-hold';
+            $order->update_status($status, $message);
+        } else {
+            $this->log("Error: Invalid operation received in payment callback: " . $operation);
+        }
+    }
+
     public function payxpert_refund($order_id, $amount = null, $reason = ''){
         $order = wc_get_order($order_id);
 
@@ -455,6 +472,12 @@ class PayXpertMain
         $prepareRequest->setCurrency($ccy);
         $prepareRequest->setAmount($order_price_cents);
         $prepareRequest->setCtrlCallbackURL($relay_response_url);
+
+        // Transaction Operation
+        $transactionOperation = $this->getTransactionOperation();
+        if (!empty($transactionOperation) && in_array(strtolower($transactionOperation), array('sale', 'authorize'))) {
+            $prepareRequest->setOperation($transactionOperation);
+        }
 
         $getuniqid = uniqid();
         $order->setId($getuniqid);
@@ -544,13 +567,13 @@ class PayXpertMain
                 wc_add_notice('Error:'.  $c2pClient->getClientErrorMessage() , 'error' );
             return; 
             }
-        }       
+        }
 
         // we received the payment
         $message = "Successful transaction by customer redirection. Transaction Id: " . $_POST['transactionId'];
         $order->payment_complete($_POST['transactionId']);
         $order->reduce_order_stock();
-        $order->update_status('completed', $message);
+        $this->setOrderStatus($order, $transaction->getOperation(), $message);
         // Save the merchant token for callback verification For later
         update_post_meta($order_id, '_payxpert_merchant_token', $_POST['merchantToken']);
         update_post_meta($order_id, '_payxpert_transaction_id', $_POST['transactionId']);
