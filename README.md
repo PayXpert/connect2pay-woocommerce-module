@@ -2,9 +2,10 @@
 ### Version for WooCommerce 3.7 to 4.8
 
 The author of this plugin can NEVER be held responsible for this software.
-There is no warranty what so ever. You accept this by using this software.
+There is no warranty whatsoever. You accept this by using this software.
 
 ## Changelog
+* 1.2.6 - Added support for PayXpert Card Token, add ability to configure transaction default operation (sale or authorize)
 * 1.2.5 - Added flexible field for Seamless Checkout version and integrity hash
 * 1.2.4 - Removed "billing state" from required parameters
 * 1.2.3 - Proper parse of checkout form string
@@ -22,19 +23,11 @@ There is no warranty what so ever. You accept this by using this software.
 ## Installation
 1. Install the plugin like you always install plugins, either by uploading it via FTP or by using the "Add Plugin" function of WordPress.
 
-2. Go to the main directory of the plugin and run:
+2. Activate the plugin at the plugin administration page
 
-```
-php composer.phar install
+3. Go the that WooCommerce Settings, click on Checkout, you will see a new Checkout Options: PayXpert
 
-```
-
-3. Activate the plugin at the plugin administration page
-
-4. Go the that WooCommerce Settings, click on Checkout, you will see a new Checkout Options: PayXpert
-
-5. Click on the PayXpert Checkout Options, enable the gateway and fill the information provided by PayXpert
-
+4. Click on the PayXpert Checkout Options, enable the gateway and fill the information provided by PayXpert
    
 ## Support
 Please visit the PayXpert website (http://www.payxpert.com) for our support contact details.
