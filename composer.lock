@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7667e07580a71d25f77dcf61869320be",
+    "content-hash": "3903c8397b6066f86f219758c6fb274d",
     "packages": [
         {
             "name": "payxpert/connect2pay",
-            "version": "2.70.0",
+            "version": "2.71.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PayXpert/connect2pay-php-client.git",
-                "reference": "91c827c3f3bd3019059e920eaa91e356d14c70ce"
+                "reference": "581723f3891d9295549cb053e324078e96871d56"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PayXpert/connect2pay-php-client/zipball/91c827c3f3bd3019059e920eaa91e356d14c70ce",
-                "reference": "91c827c3f3bd3019059e920eaa91e356d14c70ce",
+                "url": "https://api.github.com/repos/PayXpert/connect2pay-php-client/zipball/581723f3891d9295549cb053e324078e96871d56",
+                "reference": "581723f3891d9295549cb053e324078e96871d56",
                 "shasum": ""
             },
             "require": {
@@ -39,7 +39,7 @@
             "license": [
                 "Apache-2.0"
             ],
-            "description": "Payxpert Payment Page System client library",
+            "description": "PayXpert Payment Page System client library",
             "homepage": "https://github.com/PayXpert/connect2pay-php-client",
             "keywords": [
                 "SEPA Direct Debit",
@@ -47,7 +47,11 @@
                 "credit card",
                 "payment"
             ],
-            "time": "2021-02-26T10:09:38+00:00"
+            "support": {
+                "issues": "https://github.com/PayXpert/connect2pay-php-client/issues",
+                "source": "https://github.com/PayXpert/connect2pay-php-client/tree/v2.71.0"
+            },
+            "time": "2022-08-31T17:34:08+00:00"
         }
     ],
     "packages-dev": [],
@@ -58,5 +62,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "1.1.0"
+    "plugin-api-version": "2.0.0"
 }
