@@ -62,7 +62,19 @@ class PayXpertOption
             'id'       => 'payxpert_seamless_card',
             'type'     => 'checkbox',
             'desc'     => __( 'Enable Seamless Card Pay', 'payxpert' ),
-        );      
+        );
+        $settings_payxpert[] = array(
+            'name'     => __( 'Transaction Operation', 'payxpert' ),
+            'desc_tip' => __( 'The type of operation that will be done when paying: choosing Authorize will require to manually capture the fund later on', 'payxpert' ),
+            'id'       => 'payxpert_transaction_operation',
+            'type'     => 'select',
+            'desc'     => __('Choose the type of operation to be done when processing the transaction', 'payxpert'),
+            'options' => array(
+                'default' => __('Default value for the account', 'payxpert'),
+                'sale' => __('Sale', 'payxpert'),
+                'authorize' => __('Authorize', 'payxpert')
+            )
+        );
         $settings_payxpert[] = array(
             'name'     => __( 'Merchant Notifications', 'payxpert' ),
             'desc_tip' => __( 'Determine if you want or not merchant notifications after each payment attempt', 'payxpert' ),
