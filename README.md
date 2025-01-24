@@ -1,40 +1,71 @@
 # WooCommerce PayXpert Payment Module
-### Version for WooCommerce 3.7 to 4.8
 
-The author of this plugin can NEVER be held responsible for this software.
-There is no warranty what so ever. You accept this by using this software.
+### Compatible with WooCommerce 4.8 to 9.3
 
-## Changelog
-* 1.2.5 - Added flexible field for Seamless Checkout version and integrity hash
-* 1.2.4 - Removed "billing state" from required parameters
-* 1.2.3 - Proper parse of checkout form string
-* 1.2.2 - Fixed bad encoding
-* 1.2.1 - Added order.type required parameter
-* 1.2.0 - Added Seamless Checkout, WeChat Pay, Alipay method
-* 1.1.4 - Removed direct access to properties, fixed iframe, refund features
-* 1.1.3 - Updated Connect2Pay client, removed deprecated functions
-* 1.1.2 - Enforce no-cancel policy for failed transactions
-* 1.1.1 - Pay button text as a setting
-* 1.1.0 - Iframe option
-* 1.0.1 - Get order parameters with methods
-* 1.0.0 - Released iframe branch
+> **Disclaimer:**
+> The author of this plugin cannot be held responsible for any issues arising from the use of this software. There is no warranty of any kind. By using this plugin, you agree to these terms.
+> License: GPL-2.0-or-later
+> License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-## Installation
-1. Install the plugin like you always install plugins, either by uploading it via FTP or by using the "Add Plugin" function of WordPress.
 
-2. Go to the main directory of the plugin and run:
+---
 
-```
-php composer.phar install
+## **Changelog**
 
-```
+### Updates, Fixes, and Features
+- **1.3.0**: Removed iframe support, added fully functional seamless integration.
+- **1.2.9**: Introduced multi-language support (English, Spanish, French).
+- **1.2.8**: Revamped settings page and added account validation.
+- **1.2.7**: Added support for WooCommerce High-Performance Order Storage (HPOS).
+- **1.2.6**: Preinstalled stable PayXpert API library.
+- **1.2.5**: Added flexible fields for Seamless Checkout version and integrity hash.
+- **1.2.4**: Removed "billing state" from required parameters.
+- **1.2.3**: Improved checkout form string parsing.
+- **1.2.2**: Resolved encoding issues.
+- **1.2.1**: Added `order.type` as a required parameter.
+- **1.2.0**: Introduced Seamless Checkout, WeChat Pay, and AliPay payment methods.
+- **1.1.x**: Various updates, including Pay button customization and deprecated function removals.
+- **1.0.0**: Initial release with iframe branch.
 
-3. Activate the plugin at the plugin administration page
+---
 
-4. Go the that WooCommerce Settings, click on Checkout, you will see a new Checkout Options: PayXpert
+## **Installation Instructions**
 
-5. Click on the PayXpert Checkout Options, enable the gateway and fill the information provided by PayXpert
+1. **Upload the Plugin:**
+   - Use the WordPress "Add Plugin" feature in the admin panel, or upload the plugin via FTP to the `/wp-content/plugins/` directory.
 
-   
-## Support
-Please visit the PayXpert website (http://www.payxpert.com) for our support contact details.
+2. **Activate the Plugin:**
+   - Navigate to the Plugins page in your WordPress admin area and activate the "PayXpert Payment Module."
+
+3. **Configure Payment Gateway:**
+   - Go to **WooCommerce > Settings > Payments**, and select "PayXpert" from the list of payment gateways.
+   - Enable the gateway and enter the credentials provided by PayXpert:
+     - **Originator ID**
+     - **Password**
+
+4. **Save Settings:**
+   - Once all details are entered, click **Save Changes** to enable the PayXpert gateway.
+
+> **Tip:** Ensure your WooCommerce environment meets the plugin’s prerequisites for optimal functionality.
+
+For a complete step-by-step guide, visit the [PayXpert Plugin Documentation](https://payxpert-docs.atlassian.net/wiki/x/AQDxLQ).
+
+---
+
+## **Features**
+
+- **Seamless Integration:** Provides a fully integrated checkout experience directly on your site.
+- **Multi-Language Support:** Fully translated into English, Spanish, and French.
+- **High-Performance Order Storage (HPOS):** Enhanced WooCommerce performance for large-scale stores.
+- **Flexible Payment Options:** Supports card payments, WeChat Pay, and AliPay.
+- **Secure Transactions:** Preconfigured with PayXpert's stable API library for secure and reliable payment processing.
+
+---
+
+## **Support**
+
+For support or assistance, visit the [PayXpert website](http://www.payxpert.com) and refer to the contact details provided.
+
+> **Note:** For faster support, include details of your WooCommerce version, plugin version, and any relevant error logs when reaching out.
+
+---

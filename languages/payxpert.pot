@@ -1,0 +1,380 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: WooCommerce PayXpert Gateway\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-12-11 19:12+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: \n"
+"Language: \n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.6.14; wp-6.6.2\n"
+"X-Domain: payxpert"
+
+#: includes/class-wc-setting.php:450
+msgid "Active gateways"
+msgstr ""
+
+#: includes/class-wc-setting.php:443
+msgid "Active theme"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-alipay.php:32
+msgid "Alipay by PayXpert"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-alipay.php:33
+msgid "Alipay payment method"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-alipay.php:46
+msgid "Alipay via PayXpert"
+msgstr ""
+
+#: includes/class-wc-setting.php:71
+msgid "Authorize"
+msgstr ""
+
+#: includes/class-wc-setting.php:85
+msgid "Chinese"
+msgstr ""
+
+#: includes/class-wc-setting.php:266
+msgid "Configuration"
+msgstr ""
+
+#: includes/class-wc-setting.php:219
+msgid "Connection Failed"
+msgstr ""
+
+#: includes/class-wc-setting.php:215
+msgid "Connection Successful"
+msgstr ""
+
+#: includes/class-wc-setting.php:455
+msgid "Copy to Clipboard"
+msgstr ""
+
+#: includes/class-wc-setting.php:170 includes/class-wc-setting.php:207
+msgid "Create Account"
+msgstr ""
+
+#: includes/class-wc-setting.php:140
+msgid "Credentials"
+msgstr ""
+
+#: includes/class-wc-setting.php:249
+msgid "Credit Card Mode"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-card.php:33
+msgid "Credit cards by PayXpert"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-card.php:34
+#: includes/class-wc-gateway-payxpert-card.php:58
+msgid "Credit cards via PayXpert"
+msgstr ""
+
+#: includes/class-wc-setting.php:269
+msgid "Customize the behavior and appearance of your payment system."
+msgstr ""
+
+#: includes/class-wc-setting.php:69 includes/class-wc-setting.php:74
+msgid "Default value for the account"
+msgstr ""
+
+#: includes/class-wc-setting.php:76
+msgid "Disabled"
+msgstr ""
+
+#: includes/class-wc-setting.php:115
+msgid "Documentation"
+msgstr ""
+
+#: includes/class-wc-setting.php:440
+msgid "Domain"
+msgstr ""
+
+#: includes/class-wc-setting.php:61
+msgid "Enable AliPay"
+msgstr ""
+
+#: includes/class-wc-setting.php:62
+msgid "Enable Card payment"
+msgstr ""
+
+#: includes/class-wc-setting.php:60
+msgid "Enable WeChat Pay"
+msgstr ""
+
+#: includes/class-wc-setting.php:75
+msgid "Enabled"
+msgstr ""
+
+#: includes/class-wc-setting.php:79
+msgid "English"
+msgstr ""
+
+#: includes/class-wc-setting.php:80
+msgid "French"
+msgstr ""
+
+#: includes/class-wc-setting.php:83
+msgid "German"
+msgstr ""
+
+#. URI of the plugin
+#. Author URI of the plugin
+msgid "http://www.payxpert.com"
+msgstr ""
+
+#: includes/class-wc-setting.php:311
+msgid "Integrity Hash"
+msgstr ""
+
+#: includes/class-wc-setting.php:513
+msgid "Invalid nonce"
+msgstr ""
+
+#: includes/class-wc-setting.php:82
+msgid "Italian"
+msgstr ""
+
+#: includes/class-wc-setting.php:86
+msgid "Japanese"
+msgstr ""
+
+#: includes/class-wc-setting.php:350
+msgid "Log PayXpert events, such as Callback"
+msgstr ""
+
+#: includes/class-wc-setting.php:166 includes/class-wc-setting.php:203
+msgid "Login"
+msgstr ""
+
+#: includes/class-wc-setting.php:361
+msgid "Manage notifications sent to the merchant after payment attempts."
+msgstr ""
+
+#: includes/class-wc-setting.php:396
+msgid "Merchant Email Notifications Language"
+msgstr ""
+
+#: includes/class-wc-setting.php:383
+msgid "Merchant Email Notifications Recipient"
+msgstr ""
+
+#: includes/class-wc-setting.php:365
+msgid "Merchant Notifications"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:639
+msgid ""
+"Merchant Token Not matching with PayXpert, Please Contact with Website Owner."
+msgstr ""
+
+#: includes/class-wc-setting.php:358
+msgid "Notifications"
+msgstr ""
+
+#: includes/class-wc-setting.php:150 includes/class-wc-setting.php:189
+msgid "Originator ID"
+msgstr ""
+
+#: includes/class-wc-setting.php:158 includes/class-wc-setting.php:196
+msgid "Password"
+msgstr ""
+
+#: includes/class-wc-setting.php:291
+msgid "Pay Button Title"
+msgstr ""
+
+#: includes/class-wc-setting.php:337
+msgid "Payment Gateway URL (Refund)"
+msgstr ""
+
+#: includes/class-wc-setting.php:233
+msgid "Payment Methods"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:359
+msgid "Payment not complete, please try again"
+msgstr ""
+
+#: includes/class-wc-setting.php:324
+msgid "Payment Page URL"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:318
+msgid "Payment preparation error occurred"
+msgstr ""
+
+#. Author of the plugin
+msgid "PayXpert"
+msgstr ""
+
+#: includes/class-wc-setting.php:33
+msgid "PayXpert Settings"
+msgstr ""
+
+#: includes/class-wc-setting.php:437
+msgid "PHP version"
+msgstr ""
+
+#: includes/class-wc-setting.php:141
+msgid "Please enter your credentials to unlock the settings below."
+msgstr ""
+
+#: includes/class-wc-setting.php:127
+msgid "Plugin Settings"
+msgstr ""
+
+#: includes/class-wc-setting.php:424
+msgid "Plugin version"
+msgstr ""
+
+#: includes/class-wc-setting.php:84
+msgid "Polish"
+msgstr ""
+
+#: includes/class-wc-setting.php:66
+msgid "Redirection"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:480
+#, php-format
+msgid "Refunded %s - Refund ID: %s"
+msgstr ""
+
+#: includes/class-wc-setting.php:70
+msgid "Sale"
+msgstr ""
+
+#: includes/class-wc-setting.php:461
+msgid "Save Settings"
+msgstr ""
+
+#: includes/class-wc-setting.php:65
+msgid "Seamless"
+msgstr ""
+
+#: includes/class-wc-setting.php:298
+msgid "Seamless Checkout Version"
+msgstr ""
+
+#: includes/class-wc-setting.php:447
+msgid "Secure Connection (HTTPS)"
+msgstr ""
+
+#: includes/class-wc-setting.php:235
+msgid "Select and configure the payment methods available for your customers."
+msgstr ""
+
+#: includes/class-wc-setting.php:81
+msgid "Spanish"
+msgstr ""
+
+#: includes/class-wc-setting.php:417
+msgid "Status"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:350 includes/class-wc-payxpert.php:656
+msgid "Successful transaction by customer redirection. Transaction Id: "
+msgstr ""
+
+#: includes/class-wc-payxpert.php:392
+msgid "Successful transaction Callback received with transaction Id: "
+msgstr ""
+
+#: includes/class-wc-setting.php:420
+msgid "Summary of the current website and plugin status."
+msgstr ""
+
+#: includes/class-wc-setting.php:118
+msgid "Support"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:645
+msgid ""
+"Transaction ID Not matching with PayXpert, Please Contact with Website Owner."
+msgstr ""
+
+#: includes/class-wc-setting.php:273
+msgid "Transaction Operation"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:399
+msgid ""
+"Unsuccessful transaction Callback received with the following information: "
+msgstr ""
+
+#: includes/class-wc-payxpert.php:356
+msgid "Unsuccessful transaction, customer left payment flow. Retrieved data: "
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-wechat.php:37
+msgid "WeChat by PayXpert"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-wechat.php:38
+msgid "WeChat Pay method"
+msgstr ""
+
+#: includes/class-wc-gateway-payxpert-wechat.php:53
+msgid "WeChat via PayXpert"
+msgstr ""
+
+#. Name of the plugin
+msgid "WooCommerce PayXpert Gateway"
+msgstr ""
+
+#. Description of the plugin
+msgid "WooCommerce PayXpert Gateway plugin"
+msgstr ""
+
+#: includes/class-wc-setting.php:432
+msgid "WooCommerce version"
+msgstr ""
+
+#: includes/class-wc-setting.php:428
+msgid "WordPress version"
+msgstr ""
+
+#: includes/class-wc-setting.php:520
+msgid "You do not have permission to save settings"
+msgstr ""
+
+#: includes/class-wc-setting.php:130
+msgid "Your plugin description goes here. Version"
+msgstr ""
+
+msgid ""
+"Specifies the payment operation type. Selecting \"Authorize\" means funds "
+"must be manually captured later."
+msgstr ""
+
+msgid ""
+"Decide whether merchants should receive notifications after each payment "
+"attempt."
+msgstr ""
+
+msgid "The email address to which merchant notifications will be sent."
+msgstr ""
+
+msgid "The language in which merchant notifications will be delivered."
+msgstr ""
+
+msgid "The version of Seamless Checkout to be used."
+msgstr ""
+
+msgid "The file hash value of the Seamless Checkout script."
+msgstr ""
+
+msgid "Do not change this field unless provided with a specific URL."
+msgstr ""
