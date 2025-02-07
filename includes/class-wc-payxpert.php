@@ -254,7 +254,7 @@ class PayXpertMain
 		$shopper->setFirstName(substr($orderdetails->get_billing_first_name(), 0, 35))->setLastName(substr($orderdetails->get_billing_last_name(), 0, 35));
 		$shopper->setAddress1(substr(trim($orderdetails->get_billing_address_1() . ' ' . $orderdetails->get_billing_address_2()), 0, 255));
 		$shopper->setZipcode(substr($orderdetails->get_billing_postcode(), 0, 10))->setCity(substr($orderdetails->get_billing_city(), 0, 50))->setState(substr($orderdetails->get_billing_state(), 0, 30))->setCountryCode(substr(trim($orderdetails->get_billing_country()), 0, 20));
-		$shopper->setHomePhonePrefix("212")->setHomePhone(substr(trim($orderdetails->get_billing_country()), 0, 20));
+		$shopper->setHomePhonePrefix("212")->setHomePhone(substr(trim($orderdetails->get_billing_phone()), 0, 20));
 		$shopper->setEmail($orderdetails->get_billing_email());
 
 

@@ -4,7 +4,9 @@
 
 > **Disclaimer:**
 > The author of this plugin cannot be held responsible for any issues arising from the use of this software. There is no warranty of any kind. By using this plugin, you agree to these terms.
-> License: GPL-2.0-or-later
+>
+> Tested up to: 6.7.1<br>
+> License: GPL-2.0-or-later<br>
 > License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
 
@@ -13,6 +15,7 @@
 ## **Changelog**
 
 ### Updates, Fixes, and Features
+- **1.3.1**: Fixed an issue with home phone parameter
 - **1.3.0**: Removed iframe support, added fully functional seamless integration.
 - **1.2.9**: Introduced multi-language support (English, Spanish, French).
 - **1.2.8**: Revamped settings page and added account validation.
