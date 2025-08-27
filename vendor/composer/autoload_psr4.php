@@ -6,6 +6,7 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Payxpert\\' => array($baseDir . '/src'),
     'PayXpert\\Connect2Pay\\Tests\\' => array($vendorDir . '/payxpert/connect2pay/tests'),
     'PayXpert\\Connect2Pay\\' => array($vendorDir . '/payxpert/connect2pay/src'),
 );

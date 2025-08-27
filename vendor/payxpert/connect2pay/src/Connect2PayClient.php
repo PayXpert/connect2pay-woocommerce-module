@@ -221,7 +221,7 @@ class Connect2PayClient
     {
         $url = $this->url . self::$API_ROUTES['ACCOUNT_INFO'];
         $url .= '?apiVersion=' . $this->getApiVersion();
-
+        
         $result = $this->doGet($url, array(), false);
 
         if ($result !== null && is_object($result)) {

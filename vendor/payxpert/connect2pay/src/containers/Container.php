@@ -28,7 +28,7 @@ class Container implements \JsonSerializable
         }
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize()
     {
         return self::extract_props($this);
     }

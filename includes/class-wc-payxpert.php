@@ -1,699 +1,724 @@
 <?php
-/**
- * Create PayXpert Main Class
- */
 
-use PayXpert\Connect2Pay\Connect2PayClient;
-use PayXpert\Connect2Pay\containers\Account;
-use PayXpert\Connect2Pay\containers\constant\OrderShippingType;
-use PayXpert\Connect2Pay\containers\constant\OrderType;
+namespace Payxpert;
+
+use Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry;
+use DateTime;
 use PayXpert\Connect2Pay\containers\constant\PaymentMethod;
 use PayXpert\Connect2Pay\containers\constant\PaymentMode;
-use PayXpert\Connect2Pay\containers\Order;
-use PayXpert\Connect2Pay\containers\request\PaymentPrepareRequest;
-use PayXpert\Connect2Pay\containers\Shipping;
-use PayXpert\Connect2Pay\containers\Shopper;
+use Payxpert\Models\Payxpert_Payment_Transaction;
+use Payxpert\Utils\WC_Payxpert_Cron;
+use Payxpert\Utils\WC_Payxpert_Logger;
+use Payxpert\Utils\WC_Payxpert_Utils;
+use Payxpert\Utils\WC_Payxpert_Webservice;
+use WC_Customer;
 
-class PayXpertMain
-{
+defined( 'ABSPATH' ) || exit();
 
-	/** @var boolean Whether logging is enabled */
-	public static $log_enabled = false;
+class WC_Payxpert {
+	const REDIRECT_MODE_REDIRECT = 0;
+    const REDIRECT_MODE_SEAMLESS = 1;
 
-	/** @var WC_Logger Logger instance */
-	public static $log = false;
+    const REDIRECT_MODES = [
+        self::REDIRECT_MODE_REDIRECT,
+        self::REDIRECT_MODE_SEAMLESS,
+    ];
 
-	private $debug;
+    const CAPTURE_MODE_AUTOMATIC = 0;
+    const CAPTURE_MODE_MANUAL = 1;
 
-	private $response_code_success = '200';
+    const CAPTURE_MODES = [
+        self::CAPTURE_MODE_AUTOMATIC,
+        self::CAPTURE_MODE_MANUAL,
+    ];
 
-	function __construct()
-	{
-		$this->debug = $this->getDebug();
-		self::$log_enabled = $this->debug;
+	//! Do not exceed 17chars
+	const ORDER_STATUS_INSTALLMENT_PENDING = 'pxp-istlm-pending';
+	const ORDER_STATUS_CAPTURE_PENDING = 'pxp-captr-pending';
 
-	}
+	public static $_instance;
 
-	public function getOriginatorId()
-	{
-		return get_option('payxpert_originator_id');
-	}
-
-	public function getPassword()
-	{
-		return get_option('payxpert_password');
-	}
-
-	public function getConnectUrl()
-	{
-		if (empty(get_option('payxpert_connect2_url'))) {
-			$connect2_url = 'https://connect2.payxpert.com';
-		} else {
-			$connect2_url = get_option('payxpert_connect2_url');
-		}
-		$connect2_url .= (substr($connect2_url, -1) == '/' ? '' : '/');
-
-		return trim( $connect2_url );
-	}
-
-	public function getApiUrl()
-	{
-		if (empty(get_option('payxpert_api_url'))) {
-			$api_url = 'https://api.payxpert.com';
-		} else {
-			$api_url = get_option('payxpert_api_url');
-		}
-		$api_url .= (substr($api_url, -1) == '/' ? '' : '/');
-
-		return $api_url;
-	}
-
-	public function getOrderButtonText()
-	{
-		if (empty(get_option('payxpert_pay_button'))) {
-			$ordertextbutton = 'Place Order';
-		} else {
-			$ordertextbutton = get_option('payxpert_pay_button');
+	public static function instance() {
+		if ( self::$_instance == null ) {
+			self::$_instance = new self();
 		}
 
-		return $ordertextbutton;
+		return self::$_instance;
 	}
 
-	public function getSeamlessCheckoutVersion()
-	{
-		return get_option('payxpert_seamless_version');
-	}
-
-	public function getSeamlessCheckoutHash()
-	{
-		return get_option('payxpert_seamless_hash');
-	}
-
-	public function getDebug()
-	{
-		if (get_option('payxpert_debug') == 'no') {
-			$debugreturn = false;
-		} else {
-			$debugreturn = true;
-		}
-
-		return $debugreturn;
-	}
-
-	public function merchant_notifications()
-	{
-		return get_option('payxpert_merchant_notifications');
-	}
-
-	public function merchant_notifications_to()
-	{
-		return get_option('payxpert_merchant_notifications_to');
-	}
-
-	public function merchant_notifications_lang()
-	{
-		return get_option('payxpert_merchant_notifications_lang');
-	}
-
-	public function getTransactionOperation()
-	{
-		return get_option('payxpert_transaction_operation');
-	}
-
-	/**
-	 * Logging method
-	 *
-	 * @param string $message
-	 */
-	public static function log($message)
-	{
-		if (self::$log_enabled) {
-			if (empty(self::$log)) {
-				self::$log = new WC_Logger();
+    public function __construct() {
+		add_action( 'before_woocommerce_init', function () {
+			if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+				\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', WC_PAYXPERT_PLUGIN_FILE_PATH . 'payxpert.php' );
+				\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', WC_PAYXPERT_PLUGIN_FILE_PATH . 'payxpert.php' );
 			}
-			self::$log->add('PayXpert', $message);
+		});
+		
+		add_action( 'init', array($this, 'init') );
+		add_action( 'woocommerce_init', array( $this, 'woocommerce_dependencies' ) );
+		add_action( 'woocommerce_blocks_loaded', array( $this, 'payxpert_blocks_loaded' ) );
+
+		add_filter( 'plugin_action_links_' . WC_PAYXPERT_PLUGIN_NAME, array( $this, 'action_links') );
+
+		add_action( 'plugins_loaded', function() {
+			// Load translations
+			load_plugin_textdomain( 'payxpert', false, dirname( WC_PAYXPERT_PLUGIN_NAME ) . '/languages/' );
+
+			if (is_admin()) {
+				require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/admin/class-wc-payxpert-settings.php';
+				\WC_Payxpert_Settings::instance();
+
+				require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/admin/class-wc-payxpert-transaction-list.php';
+				\WC_Payxpert_Transaction_List::instance();
+
+				require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/admin/class-wc-payxpert-subscription-list.php';
+				\WC_Payxpert_Subscription_List::instance();
+			}
+		});
+
+		// IFRAME ajax call
+        add_action( 'wp_ajax_payxpert_handle_payment_result', array($this, 'handle_payxpert_payment_result') );
+        add_action( 'wp_ajax_nopriv_payxpert_handle_payment_result', array($this, 'handle_payxpert_payment_result') );
+
+		add_action('wp_ajax_payxpert_refresh_tokens', array($this, 'payxpert_refresh_tokens') );
+		add_action('wp_ajax_nopriv_payxpert_refresh_tokens', array($this, 'payxpert_refresh_tokens') );
+
+		// Transaction section in order page (BO)
+		add_action( 'add_meta_boxes', array($this, 'payxpert_add_transaction_metabox') );
+
+		// Payment gateways
+        add_filter( 'woocommerce_payment_gateways', array( $this, 'add_payment_gateway' ) );
+		add_filter( 'woocommerce_available_payment_gateways', array( $this, 'payxpert_available_payment_gateways' ) );
+		
+		// Order status management
+		add_filter( 'wc_order_statuses', array($this, 'payxpert_order_statuses') );
+		add_filter( 'woocommerce_register_shop_order_post_statuses', array($this, 'register_payxpert_shop_order_statuses') );
+		add_filter( 'woocommerce_order_is_paid_statuses', function ($statuses) {
+			$statuses[] = self::ORDER_STATUS_INSTALLMENT_PENDING;
+			return $statuses;
+		} );
+
+		// Admin GLOBAL CSS
+		add_action( 'admin_enqueue_scripts', function() {
+			wp_enqueue_style(
+				'payxpert-admin-global',
+				WC_PAYXPERT_ASSETS . 'css/admin-global.css'
+			);
+		} );
+
+		// Support mail
+		add_filter( 'woocommerce_email_classes', function( $emails ) {
+			require_once WC_PAYXPERT_PLUGIN_FILE_PATH. 'includes/class-wc-email-payxpert-support.php';
+			require_once WC_PAYXPERT_PLUGIN_FILE_PATH. 'includes/class-wc-email-payxpert-paybylink.php';
+
+			$emails['WC_Email_Payxpert_Support'] = new \WC_Email_Payxpert_Support();
+			$emails['WC_Email_Payxpert_Paybylink'] = new \WC_Email_Payxpert_Paybylink();
+			return $emails;
+		} );
+
+
+		add_action( 'payxpert_sync_installment_transactions_cron', [new WC_Payxpert_Cron(), 'sync_installment_transactions_cron'] );
+	
+		// Admin Order - Actions
+		add_filter( 'woocommerce_order_actions', [ $this , 'payxpert_order_actions' ] ); 
+		add_action( 'woocommerce_order_action_payxpert_send_paybylink', [ $this , 'payxpert_paybylink' ] );
+		add_action( 'woocommerce_order_action_payxpert_send_paybylink_x2', [ $this , 'payxpert_paybylink_x2' ] );
+		add_action( 'woocommerce_order_action_payxpert_send_paybylink_x3', [ $this , 'payxpert_paybylink_x3' ] );
+		add_action( 'woocommerce_order_action_payxpert_send_paybylink_x4', [ $this , 'payxpert_paybylink_x4' ] );
+		
+		// Admin Order - Custom button
+		add_action( 'admin_post_payxpert_capture_transaction', [ $this, 'handle_capture_transaction' ] );
+
+		//! Real gateway IDs. Check gateways/class::ID
+        $gateway_ids = [ 
+            'payxpert_cc',
+            'payxpert_installment_x2',
+            'payxpert_installment_x3',
+            'payxpert_installment_x4',
+            'payxpert_paybylink',
+        ];
+
+		// Override toggle enable/disable in wooc payment settings
+        foreach ( $gateway_ids as $gateway_id ) {
+            add_filter( "pre_update_option_woocommerce_{$gateway_id}_settings", function( $new_value ) use ( $gateway_id ) {
+                update_option($gateway_id . '_enabled', $new_value['enabled']);
+                return $new_value;
+            }, 10, 2 );
+        }
+
+		add_action( 'admin_notices', function() {
+			if ($error = get_transient('payxpert_admin_error')) {
+				echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($error) . '</p></div>';
+				delete_transient('payxpert_admin_error');
+			}
+
+			if ($success = get_transient('payxpert_admin_success')) {
+				echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($success) . '</p></div>';
+				delete_transient('payxpert_admin_success');
+			}
+
+			if ($info = get_transient('payxpert_admin_info')) {
+				echo '<div class="notice notice-info is-dismissible"><p>' . esc_html($info) . '</p></div>';
+				delete_transient('payxpert_admin_info');
+			}
+		} );
+
+		// Menu in My-Account section
+		add_action( 'woocommerce_account_payxpert-subscriptions_endpoint', function() {
+			wc_get_template('views/myaccount/subscriptions.php', [], '', WC_PAYXPERT_PLUGIN_FILE_PATH . 'templates/');
+		});
+		add_filter( 'query_vars', function ($vars) {
+			$vars[] = 'payxpert-subscriptions';
+			return $vars;
+		} );
+		add_filter( 'woocommerce_account_menu_items', function ($items) {
+			$new_items = [];
+
+			foreach ($items as $key => $label) {
+				$new_items[$key] = $label;
+
+				if ($key === 'orders') {
+					$new_items['payxpert-subscriptions'] = __('Subscriptions', 'payxpert');
+				}
+			}
+
+			return $new_items;
+		} );
+	}
+
+	public function action_links($links)
+	{
+		$url = admin_url('admin.php?page=payxpert-settings');
+		$settings_link = '<a href="' . esc_url($url) . '">' . __('Settings', 'payxpert') . '</a>';
+		array_unshift($links, $settings_link);
+		return $links;
+	}
+
+	public function payxpert_available_payment_gateways($gateways) {
+		$configuration = WC_Payxpert_Utils::get_configuration();
+
+		// Disable gateways if payxpert account not linked
+		if ($configuration['payxpert_conn_status'] == false) {
+			foreach ($gateways as $id => $gateway) {
+				if (strpos($id, 'payxpert') !== false) {
+					unset($gateways[$id]);
+				}
+			}
+		}
+
+		return $gateways;
+	}
+
+    public function woocommerce_dependencies() {
+		// Load abstracts
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/abstract/abstract-wc-payment-gateway-payxpert.php';
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/abstract/abstract-wc-payment-gateway-payxpert-installment.php';
+		
+		// Load gateways
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/class-wc-payment-gateway-payxpert-cc.php';
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/class-wc-payment-gateway-payxpert-installment-x2.php';
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/class-wc-payment-gateway-payxpert-installment-x3.php';
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/class-wc-payment-gateway-payxpert-installment-x4.php';
+		include_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/class-wc-payment-gateway-payxpert-paybylink.php';
+	}
+
+	public function add_payment_gateway($gateways)
+	{
+		$gateways[] = 'WC_Payment_Gateway_Payxpert_CC';
+		$gateways[] = 'WC_Payment_Gateway_Payxpert_Installment_X2';
+		$gateways[] = 'WC_Payment_Gateway_Payxpert_Installment_X3';
+		$gateways[] = 'WC_Payment_Gateway_Payxpert_Installment_X4';
+		$gateways[] = 'WC_Payment_Gateway_Payxpert_Paybylink';
+		
+		return $gateways;
+	}
+
+	public function payxpert_add_transaction_metabox() {
+		$screen = get_current_screen();
+		if ( ! $screen ) {
+			return;
+		}
+
+		if ( strpos( $screen->id, 'shop_order' ) === false && $screen->id !== 'woocommerce_page_wc-orders') {
+			return;
+		}
+
+		$order_id = isset($_GET['post']) ? absint($_GET['post']) : (isset($_GET['id']) ? absint($_GET['id']) : 0);
+
+		if ( ! $order_id ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		$payment_method = $order->get_payment_method();
+		if ( strpos( $payment_method, 'payxpert' ) !== 0 ) {
+			return;
+		}
+
+		add_meta_box(
+			'payxpert_transaction_meta_box',
+			'PayXpert',
+			[ $this, 'output_transaction_metabox' ],
+			$screen,
+			'normal',
+			'core'
+		);
+	}
+
+	public function handle_payxpert_payment_result() {
+        check_ajax_referer('payxpert_payment_nonce', 'security');
+
+        $transactionID = sanitize_text_field($_POST['transactionID'] ?? '');
+        $paymentID     = sanitize_text_field($_POST['paymentID'] ?? '');
+
+        if (!$transactionID || !$paymentID) {
+            wp_send_json_error(['message' => 'Missing parameters']);
+        }
+
+		$transaction = null;
+		$maxAttempts = 3;
+
+		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+			$transaction = Payxpert_Payment_Transaction::findByTransactionIdAndPaymentId((string) $transactionID, (string) $paymentID);
+
+			if ($transaction) {
+				break;
+			}
+
+			if ($attempt < $maxAttempts) {
+				sleep(1);
+			}
+		}
+
+        if (!$transaction) {
+            wp_send_json_error([
+				'message' => 'Transaction not found'
+			]);
+        }
+
+        $order = wc_get_order($transaction['order_id']);
+
+        if (!$order || $order->get_user_id() !== get_current_user_id()) {
+            wp_send_json_error(['message' => 'Unauthorized order']);
+        }
+
+        $current_status = $order->get_status();
+        if (
+			in_array(
+				$current_status, 
+				[
+					'processing', 
+					'completed', 
+					self::ORDER_STATUS_INSTALLMENT_PENDING,
+					self::ORDER_STATUS_CAPTURE_PENDING,
+				]
+			)
+		) {
+			wp_send_json_success([
+				'urlRedirect' => $order->get_checkout_order_received_url(),
+			]);
+        } 
+
+		wp_send_json_success([
+			'urlRedirect' => $order->get_view_order_url()
+		]);
+    }
+
+	public function payxpert_blocks_loaded()
+	{
+		if ( ! class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+			return;
+		}
+
+		require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/abstract/abstract-wc-payment-gateway-payxpert-installment-blocks-support.php';
+
+		require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/blocks/class-wc-payment-gateway-payxpert-cc-blocks-support.php';
+		require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/blocks/class-wc-payment-gateway-payxpert-installment-x2-blocks-support.php';
+		require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/blocks/class-wc-payment-gateway-payxpert-installment-x3-blocks-support.php';
+		require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/gateways/blocks/class-wc-payment-gateway-payxpert-installment-x4-blocks-support.php';
+		
+		add_action(
+			'woocommerce_blocks_payment_method_type_registration',
+			function (PaymentMethodRegistry $payment_method_registry) {
+				$payment_method_registry->register(new \WC_Payment_Gateway_Payxpert_CC_Blocks_Support());
+				$payment_method_registry->register(new \WC_Payment_Gateway_Payxpert_Installment_X2_Blocks_Support());
+				$payment_method_registry->register(new \WC_Payment_Gateway_Payxpert_Installment_X3_Blocks_Support());
+				$payment_method_registry->register(new \WC_Payment_Gateway_Payxpert_Installment_X4_Blocks_Support());
+			}
+		);
+
+	}
+
+	public function init()
+	{
+		// Add endpoint subscriptions in my-account
+		add_rewrite_endpoint('payxpert-subscriptions', EP_ROOT | EP_PAGES);
+
+		// New status installment payment pending
+		register_post_status('wc-' . self::ORDER_STATUS_INSTALLMENT_PENDING, array(
+			'label'                     => _x('Instalment Payment Pending (PayXpert)', 'Order status', 'payxpert'),
+			'public'                    => true,
+			'exclude_from_search'       => false,
+			'show_in_admin_all_list'    => true,
+			'show_in_admin_status_list' => true,
+			'label_count'               => _n_noop(
+				'Waiting for instalment payments <span class="count">(%s)</span>',
+				'Waiting for instalment payments <span class="count">(%s)</span>',
+				'payxpert'
+			),
+		));
+
+		// New status capture payment pending
+		register_post_status('wc-' . self::ORDER_STATUS_CAPTURE_PENDING, array(
+			'label'                     => _x('Capture Payment Pending (PayXpert)', 'Order status', 'payxpert'),
+			'public'                    => true,
+			'exclude_from_search'       => false,
+			'show_in_admin_all_list'    => true,
+			'show_in_admin_status_list' => true,
+		));
+	}
+
+	public function register_payxpert_shop_order_statuses($order_statuses)
+	{
+		// Installment payment in progress
+		$order_statuses['wc-' . self::ORDER_STATUS_INSTALLMENT_PENDING] = array(
+			'label'                     => _x('Instalment Payment Pending (PayXpert)', 'Order status', 'payxpert'),
+			'public'                    => true,
+			'exclude_from_search'       => false,
+			'show_in_admin_all_list'    => true,
+			'show_in_admin_status_list' => true,
+			'label_count'               => _n_noop(
+				'Waiting for instalment payments <span class="count">(%s)</span>',
+				'Waiting for instalment payments <span class="count">(%s)</span>',
+				'payxpert'
+			),
+		);
+
+		// Waiting for payment capture
+		$order_statuses['wc-' . self::ORDER_STATUS_CAPTURE_PENDING] = array(
+			'label'                     => _x('Capture Payment Pending (PayXpert)', 'Order status', 'payxpert'),
+			'public'                    => true,
+			'exclude_from_search'       => false,
+			'show_in_admin_all_list'    => true,
+			'show_in_admin_status_list' => true,
+		);
+
+		return $order_statuses;
+	}
+
+	public function payxpert_order_statuses($order_statuses)
+	{
+		$order_statuses['wc-' . self::ORDER_STATUS_INSTALLMENT_PENDING] = _x('Instalment Payment Pending (PayXpert)', 'Order status', 'payxpert');
+		$order_statuses['wc-' . self::ORDER_STATUS_CAPTURE_PENDING] = _x('Capture Payment Pending (PayXpert)', 'Order status', 'payxpert');
+
+		return $order_statuses;
+	}
+
+	public function output_transaction_metabox($post)
+	{
+		$order = wc_get_order($post->ID);
+        $transactions = Payxpert_Payment_Transaction::findAllByOrderId($order->get_id());
+
+        if (empty($transactions) || !is_array($transactions)) {
+            echo '<p style="text-align:center;">' . esc_html__('No transaction found.', 'payxpert') . '</p>';
+            return;
+        }
+
+		//! Used in template
+		$orderTransactionsFormatted = WC_Payxpert_Utils::get_order_transactions_formatted($transactions);
+
+       	$template_path = WC_PAYXPERT_PLUGIN_FILE_PATH . 'templates/views/html-order-transactions.php';
+
+		if (file_exists($template_path)) {
+			include $template_path;
+		} else {
+			echo '<p>' . esc_html__('Transaction template not found.', 'payxpert') . '</p>';
 		}
 	}
 
-	/**
-	 * Check if this gateway is enabled and available in the user's country
-	 *
-	 * @return bool
-	 */
-	public function is_valid_for_use()
+	public function handle_capture_transaction()
 	{
-		// We allow to use the gateway from anywhere
-		return true;
-	}
-
-	/**
-	 * Check if iframe mode is on
-	 *
-	 * @return bool
-	 */
-	public function is_iframe_on()
-	{
-		// We allow to use the gateway from any where
-		if (get_option('payxpert_iframe_mode') == 'yes') {
-			return true;
+		if (
+			!current_user_can('edit_shop_orders') ||
+			!isset($_POST['payxpert_capture_action_nonce']) ||
+			!wp_verify_nonce($_POST['payxpert_capture_action_nonce'], 'payxpert_capture_action')
+		) {
+			wp_die(__('Non authorized action.', 'payxpert'));
 		}
 
-		return false;
-	}
+		$order_id = absint($_POST['order_id'] ?? 0);
+		$transaction_id = sanitize_text_field($_POST['capture_transaction_id'] ?? '');
 
+		if (!$order_id || !$transaction_id) {
+			wp_die(__('Missing parameters.', 'payxpert'));
+		}
 
-	/**
-	 * Can the order be refunded via PayPal?
-	 *
-	 * @param WC_Order $order
-	 *
-	 * @return bool
-	 */
-	public function can_refund_order($order)
-	{
-		return $order && $order->get_transaction_id();
-	}
+		$order = wc_get_order($order_id);
 
-	/**
-	 * Complete order, add transaction ID and note
-	 *
-	 * @param WC_Order $order
-	 * @param string $txn_id
-	 * @param string $note
-	 */
-	protected function payment_complete($order, $txn_id = '', $note = '')
-	{
-		$order->add_order_note($note);
-		$order->payment_complete($txn_id);
-	}
+		if ( !$order ) {
+			wp_die(__('Order not found.', 'payxpert'));
+		}
 
-	public function redirect_to($redirect_url)
-	{
-		// Clean
-		@ob_clean();
+		$transaction = Payxpert_Payment_Transaction::findOneBy([
+			'transaction_id' => $transaction_id,
+			'order_id' => $order_id
+		]);
 
-		// Header
-		header('HTTP/1.1 200 OK');
-		echo "<script>window.parent.location.href='" . $redirect_url . "';</script>";
+		if ( !$transaction ) {
+			wp_die(__('Transaction not found.', 'payxpert'));
+		}
+
+		if ( Payxpert_Payment_Transaction::OPERATION_AUTHORIZE != $transaction['operation'] ) {
+			wp_die(__('Transaction operation must be `authorize`', 'payxpert'));
+		}
+
+		if ( !empty(Payxpert_Payment_Transaction::findOneBy(['transaction_referal_id' => $transaction_id])) ) {
+			wp_die(__('A capture transaction already exist for this transaction ID.', 'payxpert'));
+		}
+
+		$configuration = WC_Payxpert_Utils::get_configuration();
+		$captureInfo = WC_Payxpert_Webservice::capture_transaction(
+			$configuration, 
+			$transaction_id, 
+			intval(floatval($transaction['amount']) * 100)
+		);
+
+		if ( isset($captureInfo['error']) ) {
+			WC_Payxpert_Logger::critical($captureInfo['error']);
+			wp_die(__('An error occured during the capture process : ', 'payxpert') . $captureInfo['error']);
+		}
+
+		if (Payxpert_Payment_Transaction::RESULT_CODE_SUCCESS !== $captureInfo['code']) {
+			WC_Payxpert_Logger::critical($captureInfo['message']);
+			wp_die(__('An error occured during the capture process : ', 'payxpert') . $captureInfo['message']);
+		}
+
+		$transactionInfo = WC_Payxpert_Webservice::get_transaction_info($configuration, $captureInfo['transaction_id']);
+
+		$payxpertPaymentTransaction = new Payxpert_Payment_Transaction();
+		$newInfo = array_merge($transactionInfo, [
+			'order_id' => $order_id,
+			'transaction_referal_id' => $transaction_id,
+		]);
+		$payxpertPaymentTransaction->set($newInfo);
+		$payxpertPaymentTransaction->save();
+
+		$order->add_order_note(sprintf(
+			__('Transaction %s captured successfully via PayXpert.', 'payxpert'),
+			$captureInfo['transaction_id']
+		));
+
+		// Payment complete
+		$order->payment_complete($captureInfo['transaction_id']);
+
+		if (in_array($order->get_status(), ['pxp-captr-pending', 'wc-pxp-captr-pending'], true)) {
+			$new_status = $order->needs_processing() ? 'processing' : 'completed';
+			$order->update_status($new_status, __('Status updated after payment captured via PayXpert.', 'payxpert'));
+		}
+		
+		// Redirect back to the order
+		$redirect_url = WC_Payxpert_Utils::is_hpos_enabled()
+			? admin_url('admin.php?page=wc-orders&action=edit&id=' . $order_id)
+			: admin_url('post.php?post=' . $order_id . '&action=edit');
+
+		wp_redirect($redirect_url);
 		exit;
 	}
 
-	public function get_account_info() {
-
-		// init api
-		$c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getPassword());
-		return $c2pClient->getAccountInformation();
-
-	}
-
-
-	public function payxpert_process_payment($order_id, $type, $returnurl, $returnname)
+	public function payxpert_order_actions($actions)
 	{
+		global $theorder;
+		$configuration = WC_Payxpert_Utils::get_configuration();
 
-		$orderdetails = new WC_Order($order_id);
-
-		// init api
-		$c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getPassword());
-
-		$prepareRequest = new PaymentPrepareRequest();
-		$shopper = new Shopper();
-		$account = new Account();
-		$order = new Order();
-		$shipping = new Shipping();
-
-		if ($type == 'ALIPAY') {
-			$prepareRequest->setPaymentMethod(PaymentMethod::ALIPAY);
-		}
-		if ($type == 'WECHAT') {
-			$prepareRequest->setPaymentMethod(PaymentMethod::WECHAT);
-		}
-		if ($type == 'CREDIT') {
-			$prepareRequest->setPaymentMethod(PaymentMethod::CREDIT_CARD);
-		}
-
-		$prepareRequest->setPaymentMode(PaymentMode::SINGLE);
-
-		$prepareRequest->setCurrency($orderdetails->get_currency());
-
-		$total = number_format($orderdetails->get_total() * 100, 0, '.', '');
-		$prepareRequest->setAmount($total);
-
-		// Transaction Operation
-		$transactionOperation = $this->getTransactionOperation();
 		if (
-			!empty($transactionOperation) && in_array(strtolower($transactionOperation), array(
-				'sale',
-				'authorize'
-			))
+			$theorder instanceof \WC_Order
+			&& $theorder->has_status('pending')
+			&& $theorder->get_customer_id() > 0 // Order has a customer
+			&& $configuration['payxpert_paybylink_enabled'] === 'yes'
 		) {
-			$prepareRequest->setOperation($transactionOperation);
-		}
+			$actions['payxpert_send_paybylink'] = __('(PayXpert) Send PayByLink', 'payxpert');
 
-		// customer informations
-		$shopper->setId($orderdetails->get_customer_id());
-		$shopper->setFirstName(substr($orderdetails->get_billing_first_name(), 0, 35))->setLastName(substr($orderdetails->get_billing_last_name(), 0, 35));
-		$shopper->setAddress1(substr(trim($orderdetails->get_billing_address_1() . ' ' . $orderdetails->get_billing_address_2()), 0, 255));
-		$shopper->setZipcode(substr($orderdetails->get_billing_postcode(), 0, 10))->setCity(substr($orderdetails->get_billing_city(), 0, 50))->setState(substr($orderdetails->get_billing_state(), 0, 30))->setCountryCode(substr(trim($orderdetails->get_billing_country()), 0, 20));
-		$shopper->setHomePhonePrefix("212")->setHomePhone(substr(trim($orderdetails->get_billing_phone()), 0, 20));
-		$shopper->setEmail($orderdetails->get_billing_email());
-
-
-		// Shipping information
-		if ('yes' == get_option('send_shipping')) {
-			$shipping->setName(substr($orderdetails->get_shipping_first_name(), 0, 35));
-			$shipping->setAddress1(substr(trim($orderdetails->get_shipping_address_1() . " " . $orderdetails->get_shipping_address_2()), 0, 255));
-			$shipping->setZipcode(substr($orderdetails->get_shipping_postcode(), 0, 10))->setState(substr($orderdetails->get_shipping_state(), 0, 30))->setCity(substr($orderdetails->get_shipping_city(), 0, 50))->setCountryCode($orderdetails->get_shipping_country());
-			$shipping->setPhone(substr(trim(), 0, 20));
-
-		}
-
-		// Order informations
-		$order->setId(substr($orderdetails->get_id(), 0, 100));
-		$order->setType(OrderType::GOODS_SERVICE);
-		$order->setShippingType(OrderShippingType::DIGITAL_GOODS);
-		$order->setDescription(substr('Invoice:' . $orderdetails->get_id(), 0, 255));
-
-		// Successful URL
-		$order_key = $orderdetails->get_order_key(); 
-    	$success_url = get_site_url() . "/checkout/order-received/{$order_id}/?key={$order_key}";
-
-		$prepareRequest->setCtrlCallbackURL(WC()->api_request_url($returnname));
-		$prepareRequest->setCtrlRedirectURL( $success_url );
-
-
-		if ($this->is_iframe_on()) {
-			$prepareRequest->setThemeID("373");
-		}
-
-		// Merchant notifications
-		if (!empty($this->merchant_notifications()) && $this->merchant_notifications() != null) {
-			if ($this->merchant_notifications() == 'enabled') {
-				$prepareRequest->setMerchantNotification(true);
-				$prepareRequest->setMerchantNotificationTo($this->merchant_notifications_to());
-				$prepareRequest->setMerchantNotificationLang($this->merchant_notifications_lang());
-			} else if ($this->merchant_notifications() == 'disabled') {
-				$prepareRequest->setMerchantNotification(false);
-			}
-		}
-
-
-		$shopper->setAccount($account);
-		$prepareRequest->setShopper($shopper);
-		$prepareRequest->setOrder($order);
-		$prepareRequest->setShipping($shipping);
-
-		// prepare API
-		$result = $c2pClient->preparePayment($prepareRequest);
-		if ($result->getCode() == $this->response_code_success) {
-
-			// Save the merchant token for callback verification
-			$orderModel = wc_get_order($order_id);
-			$orderModel->update_meta_data('_payxpert_merchant_token', $result->getMerchantToken());
-			$orderModel->update_meta_data('_payxpert_customer_url', $c2pClient->getCustomerRedirectURL($result));
-			$orderModel->save();
-
-			$url = $c2pClient->getCustomerRedirectURL($result);
-
-			if ($this->is_iframe_on()) {
-				$url = $orderdetails->get_checkout_payment_url(true);
-			}
-
-			return array('result' => 'success', 'redirect' => $url);
-
-		} else {
-
-			$message = __('Payment preparation error occurred', 'payxpert').": " . $c2pClient->getClientErrorMessage();
-			$this->log($message);
-			wc_add_notice($message, 'error');
-
-			return array('result' => 'fail', 'redirect' => '');
-		}
-
-	}
-
-
-	public function payxpert_callback_handle()
-	{
-		$c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getPassword());
-
-		if (isset($_POST["data"]) && $_POST["data"] != null) {
-			$data = $_POST["data"];
-			$order_id = $_GET['order_id'];
-			$merchantToken = get_post_meta($order_id, '_payxpert_merchant_token', true);
-
-			// Setup the client and decrypt the redirect Status
-			if ($c2pClient->handleRedirectStatus($data, $merchantToken)) {
-				// Get the PaymentStatus object
-				$status = $c2pClient->getStatus();
-
-				$errorCode = $status->getErrorCode();
-				$merchantData = $status->getCtrlCustomData();
-				$order = wc_get_order($order_id);
-
-				// errorCode = 000 => payment is successful
-				if ($errorCode == '000') { 
-					$transaction = $status->getLastInitialTransactionAttempt();
-					$transactionId = $transaction->getTransactionID();
-					$message = __("Successful transaction by customer redirection. Transaction Id: ", 'payxpert'). $transactionId;
-					$this->payment_complete($order, $transactionId, $message, 'payxpert');
-					$order->update_status('completed', $message);
-					$this->log($message);
-					$this->redirect_to($order->get_checkout_order_received_url());
-				} else if ($errorCode == '-1') {
-					$message = __("Unsuccessful transaction, customer left payment flow. Retrieved data: ", 'payxpert') . print_r($data, true);
-					$this->log($message);
-					$this->redirect_to(wc_get_checkout_url());
-					wc_add_notice(__('Payment not complete, please try again', 'payxpert'), 'notice');
-				} else {
-					wc_add_notice(__('Payment not complete: ' . $status->getErrorMessage(), 'payxpert'), 'error');
-					$this->redirect_to(wc_get_checkout_url());
-				}
-			}
-		} else {
-
-			if ($c2pClient->handleCallbackStatus()) {
-
-				$status = $c2pClient->getStatus();
-
-				// get the Error code
-				$errorCode = $status->getErrorCode();
-				$errorMessage = $status->getErrorMessage();
-				$transaction = $status->getLastTransactionAttempt();
-				$transactionId = $transaction->getTransactionID();
-
-				$order_id = $status->getOrderID();
-
-				$order = wc_get_order($order_id);
-				$merchantToken = $status->getMerchantToken();
-
-				$amount = number_format($status->getAmount() / 100, 2, '.', '');
-
-				$data = compact("errorCode", "errorMessage", "transactionId", "order_id", "amount");
-
-				$payxpert_merchant_token = get_post_meta($order_id, '_payxpert_merchant_token', true);
-
-				// Be sure we have the same merchant token
-				if ($payxpert_merchant_token == $merchantToken) {
-					// errorCode = 000 transaction is successfull
-					if ($errorCode == '000') {
-						$message = __("Successful transaction Callback received with transaction Id: ", 'payxpert'). $transactionId;
-						$this->payment_complete($order, $transactionId, $message, 'payxpert');
-						$this->setOrderStatus($order, $transaction->getOperation(), $message);
-						$this->recordCardToken($transaction, $order);
-						$this->log($message);
-					} else {
-
-						$message = __("Unsuccessful transaction Callback received with the following information: ", 'payxpert') . print_r($data, true);
-						$order->add_order_note($message);
-						$this->log($message);
-					}
-				} else {
-					// We do not update the status of the transaction, we just log the
-					// message
-					$message = "Error. Invalid token " . $merchantToken . " for order " . $order->get_id() . " in callback from " . $_SERVER["REMOTE_ADDR"];
-					$this->log($message);
+			$order_total = $theorder->get_total();
+			
+			if (WC_Payxpert_Utils::is_installment_payment_available($configuration, $order_total)) {
+				if ($configuration['payxpert_installment_x2_enabled'] === 'yes') {
+					$actions['payxpert_send_paybylink_x2'] = __('(PayXpert) Send PayByLink x2', 'payxpert');
 				}
 
-				// Send a response to mark this transaction as notified
-				$response = array("status" => "OK", "message" => "Status recorded");
-				header("Content-type: application/json");
-				echo json_encode($response);
-				exit();
-			} else {
+				if ($configuration['payxpert_installment_x3_enabled'] === 'yes') {
+					$actions['payxpert_send_paybylink_x3'] = __('(PayXpert) Send PayByLink x3', 'payxpert');
+				}
 
-				$this->log("Error: Callback received an incorrect status from " . $_SERVER["REMOTE_ADDR"]);
-				wp_die("PayXpert Callback Failed", "PayXpert", array('response' => 500));
+				if ($configuration['payxpert_installment_x4_enabled'] === 'yes') {
+					$actions['payxpert_send_paybylink_x4'] = __('(PayXpert) Send PayByLink x4', 'payxpert');
+				}
 			}
 		}
+
+		return $actions;
 	}
 
-	private function setOrderStatus($order, $operation, $message)
+	public function payxpert_paybylink($order)
 	{
-		if (in_array(strtolower($operation), array('sale', 'authorize'))) {
-			$status = strtolower($operation) == 'sale' ? 'completed' : 'on-hold';
-			$order->update_status($status, $message);
-		} else {
-			$this->log("Error: Invalid operation received in payment callback: " . $operation);
-		}
+		$this->payxpert_paybylink_action($order);
 	}
 
-	private function recordCardToken($transaction, $order)
+	public function payxpert_paybylink_x2($order)
 	{
-		$paymentMeanInformation = $transaction->getPaymentMeanInfo();
-		if ($paymentMeanInformation !== null && $paymentMeanInformation->getCardToken() !== null) {
-			$token = new WC_Payment_Token_CC();
-			$token->set_token($paymentMeanInformation->getCardToken());
-			$token->set_gateway_id('payxpert_seamless');
-			$token->set_card_type('visa');
-			$token->set_last4(substr($paymentMeanInformation->getCardNumber(), -4));
-			$token->set_expiry_month($paymentMeanInformation->getCardExpireMonth());
-			$token->set_expiry_year($paymentMeanInformation->getCardExpireYear());
-			$token->set_user_id(get_current_user_id());
-			if (!$token->save()) {
-				wc_add_notice( __('Error saving the card token from PayXpert response'), 'error');
+		$this->payxpert_paybylink_action($order, 2);
+	}
+
+	public function payxpert_paybylink_x3($order)
+	{
+		$this->payxpert_paybylink_action($order, 3);
+	}
+
+	public function payxpert_paybylink_x4($order)
+	{
+		$this->payxpert_paybylink_action($order, 4);
+	}
+
+	private function payxpert_paybylink_action($order, $xTimes = 1)
+	{
+		try {
+			$configuration = WC_Payxpert_Utils::get_configuration();
+
+			if (!$order->has_status('pending')) {
+				throw new \Exception(__('The order status must be `Waiting for paybylink payment (PayXpert)`', 'payxpert'));
 			}
 
-			$order->update_meta_data('_payxpert_card_token', $paymentMeanInformation->getCardToken());
-			$order->save();
-		}
-
-	}
-
-	public function payxpert_refund($order_id, $amount = null, $reason = '')
-	{
-		$order = wc_get_order($order_id);
-
-		if (!$this->can_refund_order($order)) {
-			$this->log('Refund Failed: No transaction ID');
-
-			return false;
-		}
-
-		$transactionId = $order->get_transaction_id();
-
-		$c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getPassword());
-
-		if ($amount <= 0) {
-			$amount = $order->get_total();
-		}
-
-		$total = number_format($amount * 100, 0, '.', '');
-
-		$status = $c2pClient->refundTransaction($transactionId, $total);
-
-		if ($status != null && $status->getCode() != null) {
-			if ($status->getCode() === '000') {
-				$this->log("Refund Successful: Transaction ID {$status->getTransactionID()}");
-				$order->add_order_note(sprintf(__('Refunded %s - Refund ID: %s', 'payxpert'), $amount, $status->getTransactionID()));
-
-				return true;
+			if ($order->get_customer_id() == 0) {
+				throw new \Exception(__('A customer must be assigned to the order before sending PayByLink (PayXpert)', 'payxpert'));
 			}
-		} else {
-			$this->log(
-				"Refund Failed: Transaction ID {$status->getTransactionID()}, Error {$status->getErrorCode()} with message {$status->getMessage()}"
+
+			if (count($order->get_items()) === 0) {
+				throw new \Exception(__('Your order must contain at least one product (PayXpert)', 'payxpert'));
+			}
+
+			if ($order->get_total() == 0) {
+				throw new \Exception(__('Your order amount must be greater than 0 (PayXpert)', 'payxpert'));
+			}
+
+			$paymentMode = PaymentMode::SINGLE;
+			$gateway = 'payxpert_cc';
+			$instalmentParameters = [];
+
+			if ($xTimes > 1) {
+				$gateway = 'payxpert_installment';
+				$paymentMode = PaymentMode::INSTALMENTS;
+				$instalmentParameters = [
+					'firstPercentage' => $configuration['payxpert_installment_x' . $xTimes . '_percentage'],
+					'xTimes' => $xTimes,
+				];
+			}
+
+			$preparedPayment = WC_Payxpert_Webservice::preparePayment(
+				$configuration,
+				'wc_payment_gateway_' . $gateway,
+				PaymentMethod::CREDIT_CARD,
+				$paymentMode,
+				$order,
+				$instalmentParameters,
+				true
 			);
 
-			return false;
+			if (isset($preparedPayment['error'])) {
+				throw new \Exception($preparedPayment['error']);
+			}
+
+			$customer = new WC_Customer($order->get_customer_id());
+			$deadline = (new DateTime($order->get_date_created()))->modify('+30 days');
+
+			// Format products list
+			$order_products = '';
+			foreach ($order->get_items() as $item) {
+				$order_products .= '<p>- ' . esc_html($item->get_name()) . ' x ' . intval($item->get_quantity()) . '</p>';
+			}
+
+			// Send the email using WooCommerce mailer
+			$mailer = WC()->mailer();
+        	$emails = $mailer->get_emails();
+			if (!isset($emails['WC_Email_Payxpert_Paybylink'])) {
+				throw new \Exception(__('WC_Email_Payxpert_Paybylink not found', 'payxpert'));
+			}
+
+            /** @var WC_Email_Payxpert_Paybylink $paybylink_email */
+			$paybylink_email = $emails['WC_Email_Payxpert_Paybylink'];
+			$paybylink_email->trigger([
+				'recipient'        => $order->get_billing_email(),
+				'order'            => $order,
+				'payment_link'     => esc_url($preparedPayment['redirectUrl']),
+				'firstname'        => $customer->get_first_name(),
+				'lastname'         => $customer->get_last_name(),
+				'order_reference'  => $order->get_order_number(),
+				'order_date'       => $order->get_date_created()->date('Y-m-d H:i:s'),
+				'order_products'   => $order_products,
+				'order_subtotal'   => wc_price($order->get_subtotal()),
+				'order_shipping'   => wc_price($order->get_shipping_total()),
+				'order_total'      => wc_price($order->get_total()),
+				'payment_deadline' => $deadline->format('Y-m-d H:i:s'),
+				'shop_name'        => get_bloginfo('name'),
+				'shop_url'         => home_url(),
+				'email' 		   => $paybylink_email
+			]);
+
+			$order->add_order_note(__('PayByLink email sent to the customer (PayXpert)', 'payxpert'));
+
+			if (is_admin()) {
+				set_transient('payxpert_admin_success', __('The PayByLink email has been sent successfully.', 'payxpert'), 60);
+			}
+		} catch (\Exception $e) {
+			if (is_admin()) {
+				WC_Payxpert_Logger::error($e->getMessage());
+				set_transient('payxpert_admin_error', $e->getMessage(), 60);
+			}
 		}
 	}
 
-	public function payxpert_receipt_page($order_id)
-	{
-		//define the url
-		$payxpert_customer_url = get_post_meta($order_id, '_payxpert_customer_url', true);
+	public function payxpert_refresh_tokens() {
+		check_ajax_referer('payxpert_payment', 'nonce');
 
-		//display the form
-		?>
-		<iframe id="payxpert_for_woocommerce_iframe" src="<?php echo $payxpert_customer_url; ?>" width="100%" height="700"
-			scrolling="no" frameborder="0" border="0" allowtransparency="true"></iframe>
-		<?php
-	}
+		if ( ! isset($_POST['payment_method']) ) {
+			wp_send_json_error(['message' => 'Missing payment method.'], 400);
+		}
+		$payment_method = sanitize_text_field($_POST['payment_method']);
 
-	public function payxpert_seamless_checkout_field($order_button_text, $carttotal, $allpostdata, $relay_response_url)
-	{
-
-		if( empty($allpostdata) ) {
-			return true;
+		if ( ! isset($_POST['order_id']) ) {
+			wp_send_json_error(['message' => 'Missing order ID.'], 400);
 		}
 
-		echo '<div id="payment-container"><script type="application/json">
-        {
-            "externalPaymentButton":"place_order",
-            "payButtonText": "' . $order_button_text . '",
-            "onPaymentResult": "callbackreturn",
-            "hideCardHolderName":"true",
-			"enableApplePay": true
-        }</script></div>';
-
-		echo '<div id="error-message-seamless">'.__('Please Fill up all required Field to Make Payment with Credit Card').'</div>';
-
-		$ccy = get_option('woocommerce_currency');
-		$order_price_cents = $carttotal * 100;
-		if ( isset($allpostdata) && !empty($allpostdata) ) {
-			parse_str($allpostdata, $postdata);
-
-			$shopperfirstname = $postdata["billing_first_name"] ? $postdata["billing_first_name"] : "";
-			$shopperlastname = $postdata["billing_last_name"] ? $postdata["billing_last_name"] : "";
-			$shoppercountry = $postdata["billing_country"] ? $postdata["billing_country"] : "";
-			$shopperstate = $postdata["billing_state"] ? $postdata["billing_state"] : " ";
-			$shoppercity = $postdata["billing_city"] ? $postdata["billing_city"] : "";
-			$shopperaddress = $postdata["billing_address_1"] ? $postdata["billing_address_1"] : "";
-			$shopperpostcode = $postdata["billing_postcode"] ? $postdata["billing_postcode"] : "";
-			$shopperphone = $postdata["billing_phone"] ? $postdata["billing_phone"] : "";
-			$shopperemail = $postdata["billing_email"] ? $postdata["billing_email"] : "";
-		} else {
-			$shopperfirstname = "";
-			$shopperlastname = "";
-			$shoppercountry = "";
-			$shopperstate = "";
-			$shoppercity = "";
-			$shopperaddress = "";
-			$shopperpostcode = "";
-			$shopperphone = "";
-			$shopperemail = "";
+		$order_id = sanitize_text_field($_POST['order_id']);
+		$order = null;
+		if ($order_id > 0) {
+			$order = wc_get_order($order_id);
 		}
 
-		$c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getPassword());
+		// Exemple : 'payxpert_installment_x2' => donc on cherche une instance du gateway
+		$gateways = WC()->payment_gateways()->payment_gateways();
 
-		$prepareRequest = new PaymentPrepareRequest();
-		$shopper = new Shopper();
-		$account = new Account();
-		$order = new Order();
-		$shipping = new Shipping();
-
-		// Set all information for the payment
-		$prepareRequest->setPaymentMethod(PaymentMethod::CREDIT_CARD);
-		$prepareRequest->setPaymentMode(PaymentMode::SINGLE);
-		$prepareRequest->setCurrency($ccy);
-		$prepareRequest->setAmount($order_price_cents);
-		$prepareRequest->setCtrlCallbackURL($relay_response_url);
-
-		// Transaction Operation
-		$transactionOperation = $this->getTransactionOperation();
-		if (
-			!empty($transactionOperation) && in_array(strtolower($transactionOperation), array(
-				'sale',
-				'authorize'
-			))
-		) {
-			$prepareRequest->setOperation($transactionOperation);
+		if ( ! isset($gateways[ $payment_method ]) ) {
+			wp_send_json_error(['message' => 'Unknown payment method.'], 400);
 		}
 
-		$getuniqid = uniqid();
-		$order->setId($getuniqid);
-		$order->setType(OrderType::GOODS_SERVICE);
-		$order->setShippingType(OrderShippingType::DIGITAL_GOODS);
-		$order->setDescription("Payment");
+		$gateway = $gateways[ $payment_method ];
 
-		// Client details
-		$shopper->setFirstName($shopperfirstname)->setLastName($shopperlastname);
-		$shopper->setAddress1($shopperaddress);
-		$shopper->setZipcode($shopperpostcode)->setCity($shoppercity)->setState($shopperstate)->setCountryCode($shoppercountry);
-		$shopper->setHomePhonePrefix("212")->setHomePhone($shopperphone);
-		$shopper->setEmail($shopperemail);
-
-
-		// Merchant notifications
-		if (!empty($this->merchant_notifications()) && $this->merchant_notifications() != null) {
-			if ($this->merchant_notifications() == 'enabled') {
-				$prepareRequest->setMerchantNotification(true);
-				$prepareRequest->setMerchantNotificationTo($this->merchant_notifications_to());
-				$prepareRequest->setMerchantNotificationLang($this->merchant_notifications_lang());
-			} else if ($this->merchant_notifications() == 'disabled') {
-				$prepareRequest->setMerchantNotification(false);
-			}
+		if ( ! method_exists($gateway, 'get_seamless_data') ) {
+			wp_send_json_error(['message' => 'Payment method does not support seamless refresh.'], 400);
 		}
 
-		$shopper->setAccount($account);
-		$prepareRequest->setShopper($shopper);
-		$prepareRequest->setOrder($order);
-		$prepareRequest->setShipping($shipping);
+		// On appelle la méthode comme dans les blocks pour obtenir toutes les données
+		$data = $gateway->get_seamless_data($order);
 
-
-		$result = $c2pClient->preparePayment($prepareRequest);
-		if ($result->getCode() == $this->response_code_success) {
-			$_SESSION['customerToken'] = $result->getCustomerToken();
-			$_SESSION['merchantToken'] = $result->getMerchantToken();
-		} else {
-			echo __("Payment preparation error occurred: ") . $c2pClient->getClientErrorMessage() . "\n";
-		}
-
-		echo '<input type="hidden" value="' . $_SESSION['customerToken'] . '" id="tokenpass"/>';
-		echo '<input type="hidden" value="' . $_SESSION['merchantToken'] . '" name="merchantToken"/>';
-		echo '<input type="hidden" value="' . $this->getSeamlessCheckoutVersion() . '" id="seamless_version" name="seamless_version"/>';
-		echo '<input type="hidden" value="' . $this->getSeamlessCheckoutHash() . '" id="seamless_hash" name="seamless_hash"/>';
-		echo '<input type="hidden" value="" id="transactionId" name="transactionId"/>';
-		echo '<input type="hidden" value="" id="paymentId" name="paymentId"/>';
-		echo '<input type="hidden" value="" id="paymentstatus" name="paymentstatus"/>';
-
-	}
-
-
-	public function seamless_credit_card_process_payment($order_id)
-	{
-		$order = new WC_Order($order_id);
-
-		if (empty($_POST['transactionId']) || empty($_POST['paymentId']) || $_POST['paymentstatus'] !== "000") {
-			wc_add_notice( __('Progressing Payment....'), 'notice');
-
-			return;
-		}
-
-		if (get_option('payxpert_store_' . $_POST['merchantToken'] . '_' . $_POST['transactionId'] . '_' . $_POST['paymentstatus'] . '')) {
-			wc_add_notice( __("Same MerchantToken, Transaction ID Found in Database, please don\'t try it"), 'error');
-
-			return;
-		}
-
-		global $woocommerce;
-		$amount = $woocommerce->cart->total;
-		$transactionId = $_POST['transactionId'];
-		$c2pClient = new Connect2PayClient($this->getConnectUrl(), $this->getOriginatorId(), $this->getPassword());
-		$transaction = $c2pClient->getTransactionInfo($transactionId);
-
-		if ($transaction != null && $transaction->getResultCode() != null) {
-			if ($transaction->getPaymentID() != $_POST['paymentId']) {
-				wc_add_notice( __('Payment ID Not matching with PayXpert, Please Contact with Website Owner.'), 'error');
-
-				return;
-			}
-
-			if ($transaction->getPaymentMerchantToken() != $_POST['merchantToken']) {
-				wc_add_notice( __('Merchant Token Not matching with PayXpert, Please Contact with Website Owner.', 'payxpert'), 'error');
-
-				return;
-			}
-
-			if ($transaction->getTransactionID() != $_POST['transactionId']) {
-				wc_add_notice( __('Transaction ID Not matching with PayXpert, Please Contact with Website Owner.', 'payxpert'), 'error');
-
-				return;
-			}
-		} else {
-			wc_add_notice('Error:' . $c2pClient->getClientErrorMessage(), 'error');
-
-			return;
-		}
-
-		// We received the payment
-		$message = __("Successful transaction by customer redirection. Transaction Id: ", 'payxpert') . $_POST['transactionId'];
-		$order->payment_complete($_POST['transactionId']);
-		$order->reduce_order_stock();
-		$this->setOrderStatus($order, $transaction->getOperation(), $message);
-		$this->recordCardToken($transaction, $order);
-
-		// Save the merchant token for callback verification For later
-		$order->update_meta_data('_payxpert_merchant_token', $_POST['merchantToken']);
-		$order->update_meta_data('_payxpert_transaction_id', $_POST['transactionId']);
-		$order->update_meta_data('_payxpert_payment_id', $_POST['paymentstatus']);
-		$order->save();
-
-		update_option('payxpert_store_' . $_POST['merchantToken'] . '_' . $_POST['transactionId'] . '_' . $_POST['paymentstatus'], 'Yes Used Once!');
-
-		// Redirect to the thank-you page
-		return array(
-			'result' => 'success',
-			'redirect' => $order->get_checkout_order_received_url()
-		);
+		wp_send_json_success($data);
 	}
 }
+
+function payxpert() {
+	return WC_Payxpert::instance();
+}
+
+WC_Payxpert::instance();

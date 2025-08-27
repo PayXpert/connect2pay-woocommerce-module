@@ -1,74 +1,69 @@
-# WooCommerce PayXpert Payment Module
+# PayXpert WooCommerce Module
 
-### Compatible with WooCommerce 4.8 to 9.3
+### ⚠️ Important note
 
-> **Disclaimer:**
-> The author of this plugin cannot be held responsible for any issues arising from the use of this software. There is no warranty of any kind. By using this plugin, you agree to these terms.
->
-> Tested up to: 6.7.1<br>
-> License: GPL-2.0-or-later<br>
-> License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+This module is **not an update** of the previous version.  
+It is a **new standalone version (v2)**.  
+Before installing this module, the old version (**v1**) must be **uninstalled and removed**.  
 
+### 📦 Features
 
----
+- Choice of capture mode (automatic or manual)  
+- Email notification before authorization expiration  
+- Payment display modes: redirection or iFrame (seamless)  
+- PayByLink option  
+- Instalment payments  
+- Customization of payment methods  
+- Customizable notification system:
+  - Enable/disable
+  - Notification email address
+  - Notification language
 
-## **Changelog**
+### 🔧 Installation
 
-### Updates, Fixes, and Features
-- **1.3.1**: Fixed an issue with home phone parameter
-- **1.3.0**: Removed iframe support, added fully functional seamless integration.
-- **1.2.9**: Introduced multi-language support (English, Spanish, French).
-- **1.2.8**: Revamped settings page and added account validation.
-- **1.2.7**: Added support for WooCommerce High-Performance Order Storage (HPOS).
-- **1.2.6**: Preinstalled stable PayXpert API library.
-- **1.2.5**: Added flexible fields for Seamless Checkout version and integrity hash.
-- **1.2.4**: Removed "billing state" from required parameters.
-- **1.2.3**: Improved checkout form string parsing.
-- **1.2.2**: Resolved encoding issues.
-- **1.2.1**: Added `order.type` as a required parameter.
-- **1.2.0**: Introduced Seamless Checkout, WeChat Pay, and AliPay payment methods.
-- **1.1.x**: Various updates, including Pay button customization and deprecated function removals.
-- **1.0.0**: Initial release with iframe branch.
+#### Method 1: From the WordPress back office
 
----
+- Go to **Plugins > Add New**  
+- Click **Upload Plugin**  
+- Select or drag & drop the module ZIP file  
+- Click **Install Now** then **Activate**
 
-## **Installation Instructions**
+#### Method 2: Manually
 
-1. **Upload the Plugin:**
-   - Use the WordPress "Add Plugin" feature in the admin panel, or upload the plugin via FTP to the `/wp-content/plugins/` directory.
+- Unzip the module archive  
+- Copy the module folder into `/wp-content/plugins/`  
+- Then go to **Plugins > Installed Plugins**, search for "PayXpert" and click **Activate**
 
-2. **Activate the Plugin:**
-   - Navigate to the Plugins page in your WordPress admin area and activate the "PayXpert Payment Module."
+### 🔁 Module Update
 
-3. **Configure Payment Gateway:**
-   - Go to **WooCommerce > Settings > Payments**, and select "PayXpert" from the list of payment gateways.
-   - Enable the gateway and enter the credentials provided by PayXpert:
-     - **Originator ID**
-     - **Password**
+1. (Optional) Deactivate and remove the old version via **Plugins > Installed Plugins**  
+   > 🛈 If you want to keep the configuration, do not delete the plugin data
+2. Install the new version:
+   - Either by uploading the new ZIP via the plugin manager  
+   - Or by manually replacing the folder in `/wp-content/plugins/`, then activate the plugin
 
-4. **Save Settings:**
-   - Once all details are entered, click **Save Changes** to enable the PayXpert gateway.
+### 🔧 Configuration
 
-> **Tip:** Ensure your WooCommerce environment meets the plugin’s prerequisites for optimal functionality.
+After activation, go to:
 
-For a complete step-by-step guide, visit the [PayXpert Plugin Documentation](https://payxpert-docs.atlassian.net/wiki/x/AQDxLQ).
+**WooCommerce > Settings > Payments > PayXpert**, then enter:
 
----
+- API Public Key  
+- API Private Key  
 
-## **Features**
+If your keys are valid, you will gain access to the module’s advanced settings.
 
-- **Seamless Integration:** Provides a fully integrated checkout experience directly on your site.
-- **Multi-Language Support:** Fully translated into English, Spanish, and French.
-- **High-Performance Order Storage (HPOS):** Enhanced WooCommerce performance for large-scale stores.
-- **Flexible Payment Options:** Supports card payments, WeChat Pay, and AliPay.
-- **Secure Transactions:** Preconfigured with PayXpert's stable API library for secure and reliable payment processing.
+### 🛠 Dependencies
 
----
+- WooCommerce >= 7.6.0  
+- PHP >= 7.2  
+- A valid PayXpert account
 
-## **Support**
+### 📜 License
 
-For support or assistance, visit the [PayXpert website](http://www.payxpert.com) and refer to the contact details provided.
+This module is distributed under the MIT license. See the [LICENSE](./LICENSE) file for more information.
 
-> **Note:** For faster support, include details of your WooCommerce version, plugin version, and any relevant error logs when reaching out.
+### ✉️ Support
 
----
+A contact form is available on the module configuration page.  
+If you encounter any installation issues, please contact **assistance@payxpert.com**.

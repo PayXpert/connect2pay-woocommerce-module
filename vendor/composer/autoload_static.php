@@ -4,17 +4,22 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit2808b161854df4250c06f5e2ba2d92c0
+class ComposerStaticInit551d09b76ade5931d2f8408088bb3772
 {
     public static $prefixLengthsPsr4 = array (
         'P' => 
         array (
+            'Payxpert\\' => 9,
             'PayXpert\\Connect2Pay\\Tests\\' => 27,
             'PayXpert\\Connect2Pay\\' => 21,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'Payxpert\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/src',
+        ),
         'PayXpert\\Connect2Pay\\Tests\\' => 
         array (
             0 => __DIR__ . '/..' . '/payxpert/connect2pay/tests',
@@ -27,14 +32,87 @@ class ComposerStaticInit2808b161854df4250c06f5e2ba2d92c0
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'PayXpert\\Connect2Pay\\Connect2PayClient' => __DIR__ . '/..' . '/payxpert/connect2pay/src/Connect2PayClient.php',
+        'PayXpert\\Connect2Pay\\Tests\\CommonTest' => __DIR__ . '/..' . '/payxpert/connect2pay/tests/CommonTest.php',
+        'PayXpert\\Connect2Pay\\Tests\\Connect2PayAPIMock' => __DIR__ . '/..' . '/payxpert/connect2pay/tests/Connect2PayAPIMock.php',
+        'PayXpert\\Connect2Pay\\Tests\\Connect2PayClientTest' => __DIR__ . '/..' . '/payxpert/connect2pay/tests/Connect2PayClientTest.php',
+        'PayXpert\\Connect2Pay\\Tests\\PaymentStatusTest' => __DIR__ . '/..' . '/payxpert/connect2pay/tests/PaymentStatusTest.php',
+        'PayXpert\\Connect2Pay\\containers\\Account' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/Account.php',
+        'PayXpert\\Connect2Pay\\containers\\CartProduct' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/CartProduct.php',
+        'PayXpert\\Connect2Pay\\containers\\Container' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/Container.php',
+        'PayXpert\\Connect2Pay\\containers\\Order' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/Order.php',
+        'PayXpert\\Connect2Pay\\containers\\Recurrence' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/Recurrence.php',
+        'PayXpert\\Connect2Pay\\containers\\Shipping' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/Shipping.php',
+        'PayXpert\\Connect2Pay\\containers\\Shopper' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/Shopper.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\AccountAge' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/AccountAge.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\AccountLastChange' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/AccountLastChange.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\AccountPaymentMeanAge' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/AccountPaymentMeanAge.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\AccountPwChange' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/AccountPwChange.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\AccountShipInfoAge' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/AccountShipInfoAge.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\Lang' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/Lang.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\OperationType' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/OperationType.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\OrderDeliveryDelay' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/OrderDeliveryDelay.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\OrderShippingType' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/OrderShippingType.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\OrderType' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/OrderType.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\PaymentMethod' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/PaymentMethod.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\PaymentMode' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/PaymentMode.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\PaymentNetwork' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/PaymentNetwork.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\SubscriptionCancelReason' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/SubscriptionCancelReason.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\SubscriptionType' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/SubscriptionType.php',
+        'PayXpert\\Connect2Pay\\containers\\constant\\Unavailable' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/constant/Unavailable.php',
+        'PayXpert\\Connect2Pay\\containers\\request\\AliPayDirectProcessRequest' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/request/AliPayDirectProcessRequest.php',
+        'PayXpert\\Connect2Pay\\containers\\request\\ExportTransactionsRequest' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/request/ExportTransactionsRequest.php',
+        'PayXpert\\Connect2Pay\\containers\\request\\PaymentPrepareRequest' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/request/PaymentPrepareRequest.php',
+        'PayXpert\\Connect2Pay\\containers\\request\\WeChatDirectProcessRequest' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/request/WeChatDirectProcessRequest.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\AccountInformation' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/AccountInformation.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\AliPayDirectProcessResponse' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/AliPayDirectProcessResponse.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\AlipayPaymentMeanInfo' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/AlipayPaymentMeanInfo.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\BankAccount' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/BankAccount.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\BankTransferPaymentMeanInfo' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/BankTransferPaymentMeanInfo.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\CancelStatus' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/CancelStatus.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\CaptureStatus' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/CaptureStatus.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\CreditCardPaymentMeanInfo' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/CreditCardPaymentMeanInfo.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\DirectDebitPaymentMeanInfo' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/DirectDebitPaymentMeanInfo.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\ExportTransactionsResponse' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/ExportTransactionsResponse.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\OperationStatus' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/OperationStatus.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\PaymentMethodInformation' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/PaymentMethodInformation.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\PaymentMethodOption' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/PaymentMethodOption.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\PaymentPrepareResponse' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/PaymentPrepareResponse.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\PaymentStatus' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/PaymentStatus.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\RebillStatus' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/RebillStatus.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\RefundStatus' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/RefundStatus.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\SepaMandate' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/SepaMandate.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\ToditoCashPaymentMeanInfo' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/ToditoCashPaymentMeanInfo.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\TransactionAttempt' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/TransactionAttempt.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\WeChatDirectProcessResponse' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/WeChatDirectProcessResponse.php',
+        'PayXpert\\Connect2Pay\\containers\\response\\WeChatPaymentMeanInfo' => __DIR__ . '/..' . '/payxpert/connect2pay/src/containers/response/WeChatPaymentMeanInfo.php',
+        'PayXpert\\Connect2Pay\\helpers\\C2PValidate' => __DIR__ . '/..' . '/payxpert/connect2pay/src/helpers/C2PValidate.php',
+        'PayXpert\\Connect2Pay\\helpers\\Utils' => __DIR__ . '/..' . '/payxpert/connect2pay/src/helpers/Utils.php',
+        'Payxpert\\Exception\\ConfigurationNotFoundException' => __DIR__ . '/../..' . '/src/Exception/ConfigurationNotFoundException.php',
+        'Payxpert\\Exception\\CurlException' => __DIR__ . '/../..' . '/src/Exception/CurlException.php',
+        'Payxpert\\Exception\\HandleFailedException' => __DIR__ . '/../..' . '/src/Exception/HandleFailedException.php',
+        'Payxpert\\Exception\\HashFailedException' => __DIR__ . '/../..' . '/src/Exception/HashFailedException.php',
+        'Payxpert\\Exception\\PaymentCancellationException' => __DIR__ . '/../..' . '/src/Exception/PaymentCancellationException.php',
+        'Payxpert\\Exception\\PaymentMethodNotFoundException' => __DIR__ . '/../..' . '/src/Exception/PaymentMethodNotFoundException.php',
+        'Payxpert\\Exception\\PaymentTokenExpiredException' => __DIR__ . '/../..' . '/src/Exception/PaymentTokenExpiredException.php',
+        'Payxpert\\Exception\\PaymentTokenNotFoundException' => __DIR__ . '/../..' . '/src/Exception/PaymentTokenNotFoundException.php',
+        'Payxpert\\Exception\\PayxpertException' => __DIR__ . '/../..' . '/src/Exception/PayxpertException.php',
+        'Payxpert\\Models\\Payxpert_Cron_Log' => __DIR__ . '/../..' . '/src/Models/Payxpert_Cron_Log.php',
+        'Payxpert\\Models\\Payxpert_Payment_Token' => __DIR__ . '/../..' . '/src/Models/Payxpert_Payment_Token.php',
+        'Payxpert\\Models\\Payxpert_Payment_Transaction' => __DIR__ . '/../..' . '/src/Models/Payxpert_Payment_Transaction.php',
+        'Payxpert\\Models\\Payxpert_Subscription' => __DIR__ . '/../..' . '/src/Models/Payxpert_Subscription.php',
+        'Payxpert\\Utils\\WC_Payxpert_Install' => __DIR__ . '/../..' . '/src/Utils/WC_Payxpert_Install.php',
+        'Payxpert\\Utils\\WC_Payxpert_Logger' => __DIR__ . '/../..' . '/src/Utils/WC_Payxpert_Logger.php',
+        'Payxpert\\Utils\\WC_Payxpert_Utils' => __DIR__ . '/../..' . '/src/Utils/WC_Payxpert_Utils.php',
+        'Payxpert\\Utils\\WC_Payxpert_Webservice' => __DIR__ . '/../..' . '/src/Utils/WC_Payxpert_Webservice.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit2808b161854df4250c06f5e2ba2d92c0::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit2808b161854df4250c06f5e2ba2d92c0::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit2808b161854df4250c06f5e2ba2d92c0::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit551d09b76ade5931d2f8408088bb3772::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit551d09b76ade5931d2f8408088bb3772::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit551d09b76ade5931d2f8408088bb3772::$classMap;
 
         }, null, ClassLoader::class);
     }
