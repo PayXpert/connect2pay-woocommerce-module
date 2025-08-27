@@ -1,8 +1,0 @@
-.project
-.settings
-.buildpath
-examples/configuration.php
-output
-composer.lock
-composer.phar
-vendor
