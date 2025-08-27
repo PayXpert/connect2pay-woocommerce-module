@@ -1,33 +1,69 @@
-# WooCommerce PayXpert Payment Module
-### Version for WooCommerce 3.7 to 4.8
+# PayXpert WooCommerce Module
 
-The author of this plugin can NEVER be held responsible for this software.
-There is no warranty whatsoever. You accept this by using this software.
+### ⚠️ Important note
 
-## Changelog
-* 1.2.6 - Added support for PayXpert Card Token, add ability to configure transaction default operation (sale or authorize)
-* 1.2.5 - Added flexible field for Seamless Checkout version and integrity hash
-* 1.2.4 - Removed "billing state" from required parameters
-* 1.2.3 - Proper parse of checkout form string
-* 1.2.2 - Fixed bad encoding
-* 1.2.1 - Added order.type required parameter
-* 1.2.0 - Added Seamless Checkout, WeChat Pay, Alipay method
-* 1.1.4 - Removed direct access to properties, fixed iframe, refund features
-* 1.1.3 - Updated Connect2Pay client, removed deprecated functions
-* 1.1.2 - Enforce no-cancel policy for failed transactions
-* 1.1.1 - Pay button text as a setting
-* 1.1.0 - Iframe option
-* 1.0.1 - Get order parameters with methods
-* 1.0.0 - Released iframe branch
+This module is **not an update** of the previous version.  
+It is a **new standalone version (v2)**.  
+Before installing this module, the old version (**v1**) must be **uninstalled and removed**.  
 
-## Installation
-1. Install the plugin like you always install plugins, either by uploading it via FTP or by using the "Add Plugin" function of WordPress.
+### 📦 Features
 
-2. Activate the plugin at the plugin administration page
+- Choice of capture mode (automatic or manual)  
+- Email notification before authorization expiration  
+- Payment display modes: redirection or iFrame (seamless)  
+- PayByLink option  
+- Instalment payments  
+- Customization of payment methods  
+- Customizable notification system:
+  - Enable/disable
+  - Notification email address
+  - Notification language
 
-3. Go the that WooCommerce Settings, click on Checkout, you will see a new Checkout Options: PayXpert
+### 🔧 Installation
 
-4. Click on the PayXpert Checkout Options, enable the gateway and fill the information provided by PayXpert
-   
-## Support
-Please visit the PayXpert website (http://www.payxpert.com) for our support contact details.
+#### Method 1: From the WordPress back office
+
+- Go to **Plugins > Add New**  
+- Click **Upload Plugin**  
+- Select or drag & drop the module ZIP file  
+- Click **Install Now** then **Activate**
+
+#### Method 2: Manually
+
+- Unzip the module archive  
+- Copy the module folder into `/wp-content/plugins/`  
+- Then go to **Plugins > Installed Plugins**, search for "PayXpert" and click **Activate**
+
+### 🔁 Module Update
+
+1. (Optional) Deactivate and remove the old version via **Plugins > Installed Plugins**  
+   > 🛈 If you want to keep the configuration, do not delete the plugin data
+2. Install the new version:
+   - Either by uploading the new ZIP via the plugin manager  
+   - Or by manually replacing the folder in `/wp-content/plugins/`, then activate the plugin
+
+### 🔧 Configuration
+
+After activation, go to:
+
+**WooCommerce > Settings > Payments > PayXpert**, then enter:
+
+- API Public Key  
+- API Private Key  
+
+If your keys are valid, you will gain access to the module’s advanced settings.
+
+### 🛠 Dependencies
+
+- WooCommerce >= 7.6.0  
+- PHP >= 7.2  
+- A valid PayXpert account
+
+### 📜 License
+
+This module is distributed under the MIT license. See the [LICENSE](./LICENSE) file for more information.
+
+### ✉️ Support
+
+A contact form is available on the module configuration page.  
+If you encounter any installation issues, please contact **assistance@payxpert.com**.

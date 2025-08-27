@@ -1,0 +1,848 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PayXpert payment gateway\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-21 13:25+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: \n"
+"Language: \n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.8.0; wp-6.8.1; php-8.2.27\n"
+"X-Domain: payxpert"
+
+#: templates/views/html-transaction-list.php:58
+#: templates/views/html-subscription-list.php:64
+msgid "&laquo; Previous"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:543
+msgid "(PayXpert) Send PayByLink"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:549
+msgid "(PayXpert) Send PayByLink x2"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:553
+msgid "(PayXpert) Send PayByLink x3"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:557
+msgid "(PayXpert) Send PayByLink x4"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:480
+msgid "A capture transaction already exist for this transaction ID."
+msgstr ""
+
+#: includes/class-wc-payxpert.php:595
+msgid ""
+"A customer must be assigned to the order before sending PayByLink (PayXpert)"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:24
+msgid "Action"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:509
+msgid "Activate merchant notification"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:354
+msgid "Alipay"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:334
+msgid "American Express"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:22
+#: templates/views/html-payment-installment.php:35
+#: templates/views/html-order-transactions.php:16
+#: templates/views/myaccount/subscriptions.php:31
+msgid "Amount"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:492 includes/class-wc-payxpert.php:497
+msgid "An error occured during the capture process : "
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:706
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:711
+msgid "An error occured during the refund process : "
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:639
+msgid ""
+"An error occured while trying to generate the payment link. Please try again "
+"or contact the support."
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:656
+msgid "An error occurred during payment preparation."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:124
+msgid "API keys valid:"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:364
+msgid "Applepay"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:284
+msgid "Automatic"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:311
+msgid ""
+"By activating this function, it is possible to send a payment link by email "
+"from an order in the back office."
+msgstr ""
+
+#: templates/views/html-order-transactions.php:62
+msgid "Capture"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:278
+msgid "Capture mode"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:329
+msgid "Card CB/Visa/Mastercard"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:32
+msgid "Click here to pay your order"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:62
+msgid "Close"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:112
+msgid "CMS Version:"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:21
+msgid "Code"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:84
+msgid "CONTACT US"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:14
+msgid "Created At"
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-cc.php:22
+#: includes/gateways/class-wc-payment-gateway-payxpert-paybylink.php:15
+#: includes/abstract/abstract-wc-payment-gateway-payxpert-installment.php:23
+msgid "Credit card gateway."
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-cc.php:21
+msgid "Credit Cards by PayXpert"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:23
+#: templates/views/html-order-transactions.php:18
+msgid "Currency"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:371
+msgid "Customization"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:27
+#: templates/views/html-payment-installment.php:34
+msgid "Date"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:130
+msgid "day(s)"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:298
+msgid "Display mode"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:82
+msgid "Download LOGs"
+msgstr ""
+
+#: templates/views/html-settings-support-dialog.php:26
+msgid "Email"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:291
+msgid "Email notification"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:309
+msgid "Enable PayByLink"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:510
+msgid "Enable to receive notifications related to payment requests."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:525
+msgid "English"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:292
+msgid ""
+"Enter the email address that will be notified before the automatic "
+"initiation of the capture (5 days after the transaction)."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:517
+msgid "Enter the email address that will receive notifications."
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:735
+msgid "Exception during refund: "
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:661
+msgid "Failed to initialize the email class."
+msgstr ""
+
+#: templates/views/html-settings-support-dialog.php:16
+msgid "Firstname"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:526
+msgid "French"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:439
+#: includes/admin/class-wc-payxpert-settings.php:467
+#: includes/admin/class-wc-payxpert-settings.php:496
+msgid "Front label"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:23
+#: templates/emails/plain/email-paybylink.php:24
+#, php-format
+msgid "Hello %s,"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:131
+msgid "hour(s)"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://alan-allman.com/en/cabinet/we/"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:19
+msgid "ID"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:303
+msgid "IFrame"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:428
+#: includes/admin/class-wc-payxpert-settings.php:456
+#: includes/admin/class-wc-payxpert-settings.php:485
+msgid ""
+"Indicate the proportion to be paid in the first monthly payment. The "
+"remainder will be distributed equally between the other installments."
+msgstr ""
+
+#: templates/views/html-subscription-list.php:23
+msgid "Initial Amount"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:422
+msgid "Installment 2x"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:450
+msgid "Installment 3x"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:479
+msgid "Installment 4x"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:24
+msgid "Installment Amount"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:393
+msgid "Installment Payment Settings"
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-installment-x2.php:10
+msgid "Installment payment x2 by PayXpert"
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-installment-x3.php:10
+msgid "Installment payment x3 by PayXpert"
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-installment-x4.php:10
+msgid "Installment payment x4 by PayXpert"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:339
+msgid "Installment x2"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:344
+msgid "Installment x3"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:349
+msgid "Installment x4"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:29
+msgid "Iterations Left"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:26
+msgid "Last Payment"
+msgstr ""
+
+#: templates/views/html-settings-support-dialog.php:21
+msgid "Lastname"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:20
+msgid "Liability Shift"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:671
+msgid "Log file not found."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:152
+msgid "Login"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:20
+msgid "LS*"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:285
+msgid "Manual"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:410
+msgid "Maximum amount for installment payment"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:411
+msgid "Maximum order amount to enable installment payment."
+msgstr ""
+
+#: templates/views/html-order-transactions.php:22
+msgid "Message"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:399
+msgid "Minimum amount for installment payment"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:400
+msgid "Minimum order amount to enable installment payment."
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:132
+msgid "minute(s)"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:457
+msgid "Missing parameters."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:120
+msgid "Module Version:"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:129
+msgid "month(s)"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:59
+#: templates/views/html-subscription-list.php:65
+msgid "Next &raquo;"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:27
+#: templates/views/myaccount/subscriptions.php:30
+msgid "Next Payment"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:125
+msgid "No"
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:686
+msgid "No refundable transactions found for this order."
+msgstr ""
+
+#: templates/views/html-subscription-list.php:14
+msgid "No subscriptions found."
+msgstr ""
+
+#: includes/class-wc-payxpert.php:427
+msgid "No transaction found."
+msgstr ""
+
+#: templates/views/html-transaction-list.php:14
+msgid "No transactions found."
+msgstr ""
+
+#: includes/class-wc-payxpert.php:450
+msgid "Non authorized action."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:503
+msgid "Notification"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:523
+msgid "Notification language"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:516
+msgid "Notification recipient"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:25
+#: templates/views/html-order-transactions.php:15
+msgid "Operation"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:43
+#: templates/emails/plain/email-paybylink.php:34
+msgid "Order Date:"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:20
+#: templates/views/html-subscription-list.php:19
+#: templates/views/myaccount/subscriptions.php:26
+msgid "Order ID"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:463
+msgid "Order not found."
+msgstr ""
+
+#: templates/emails/email-paybylink.php:42
+#: templates/emails/plain/email-paybylink.php:33
+msgid "Order Reference:"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:377 includes/class-wc-payxpert.php:403
+#: includes/class-wc-payxpert.php:416
+msgctxt "Order status"
+msgid "Capture Payment Pending (PayXpert)"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:363 includes/class-wc-payxpert.php:389
+#: includes/class-wc-payxpert.php:415
+msgctxt "Order status"
+msgid "Instalment Payment Pending (PayXpert)"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:40
+#: templates/emails/plain/email-paybylink.php:32
+msgid "Order Summary"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:138
+msgid "Originator ID"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:145
+msgid "Password"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:440
+msgid "Pay in 2 times"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:468
+msgid "Pay in 3 times"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:497
+msgid "Pay in 4 times"
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-paybylink.php:14
+msgid "PayByLink by PayXpert"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:669
+msgid "PayByLink email sent to the customer (PayXpert)"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:36
+#: templates/emails/plain/email-paybylink.php:30
+msgid "Payment deadline:"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:381
+msgid "Payment label: Alipay"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:376
+msgid "Payment label: Credit Card"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:386
+msgid "Payment label: Wechat"
+msgstr ""
+
+#: includes/gateways/class-wc-payment-gateway-payxpert-paybylink.php:51
+msgid "Payment Link generated : "
+msgstr ""
+
+#: templates/views/html-transaction-list.php:24
+msgid "Payment Method"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:324
+msgid "Payment methods settings"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:273
+msgid "Payment Settings"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:382
+msgid "Payment via Alipay by PayXpert"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:377
+msgid "Payment via Credit Card by PayXpert"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:387
+msgid "Payment via Wechat by PayXpert"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:279
+msgid ""
+"Payments will be authorized but will require manual validation before "
+"collection. Make sure to capture transactions within the allotted time to "
+"avoid authorization expiration."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:46
+msgid "PayXpert"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-subscription-list.php:38
+msgid "PayXpert - Subscription"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-transaction-list.php:37
+msgid "PayXpert - Transaction"
+msgstr ""
+
+#. Name of the plugin
+msgid "PayXpert payment gateway"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:45
+msgid "PayXpert Settings"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:7
+msgid "PayXpert Subscriptions"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-subscription-list.php:37
+msgid "PayXpert Subscriptions List"
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:194
+msgid "PayXpert transaction received."
+msgstr ""
+
+#: templates/views/html-transaction-list.php:7
+msgid "PayXpert Transactions"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-transaction-list.php:36
+msgid "PayXpert Transactions List"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:427
+#: includes/admin/class-wc-payxpert-settings.php:455
+#: includes/admin/class-wc-payxpert-settings.php:484
+msgid "Percentage"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:25
+#: templates/views/myaccount/subscriptions.php:29
+msgid "Period"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:108
+msgid "PHP Version:"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:626
+msgid "Please fill all required fields."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:92
+msgid "Plugin Settings"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:45
+#: templates/emails/plain/email-paybylink.php:36
+msgid "Products:"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:302
+msgid "Redirection"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:13
+msgid "Referal Transaction"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:17
+msgid "Refundable amount"
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:726
+#, php-format
+msgid "Refunded %s %s from transaction %s"
+msgstr ""
+
+#: templates/views/html-transaction-list.php:26
+msgid "Result"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:30
+msgid "Retries"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:28
+msgid "Sales Transactions"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:254
+msgid "Save Settings"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:133
+msgid "second(s)"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:299
+msgid "Select the redirect mode for payments."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:61
+msgid "Send"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:192
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:99
+msgid "Settings saved successfully."
+msgstr ""
+
+#: templates/emails/email-paybylink.php:49
+#: templates/emails/plain/email-paybylink.php:40
+msgid "Shipping:"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:22
+msgid "State"
+msgstr ""
+
+#: templates/views/html-order-transactions.php:19
+#: templates/views/myaccount/subscriptions.php:28
+msgid "Status"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:520 src/Utils/WC_Payxpert_Utils.php:253
+msgid "Status updated after payment captured via PayXpert."
+msgstr ""
+
+#: templates/views/html-settings-support-dialog.php:31
+msgid "Subject"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:20
+msgid "Subscription ID"
+msgstr ""
+
+#: templates/views/html-subscription-list.php:21
+msgid "Subscription Type"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:181
+#: templates/views/myaccount/subscriptions.php:20
+msgid "Subscriptions"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:48
+#: templates/emails/plain/email-paybylink.php:39
+msgid "Subtotal:"
+msgstr ""
+
+#: templates/emails/plain/email-paybylink.php:43
+#, php-format
+msgid "Thank you for your trust, %s"
+msgstr ""
+
+#: templates/emails/email-paybylink.php:52
+#, php-format
+msgid "Thank you for your trust, %s."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:630
+msgid "The email address is not valid."
+msgstr ""
+
+#: includes/class-wc-payxpert.php:591
+msgid "The order status must be `Waiting for paybylink payment (PayXpert)`"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:672
+msgid "The PayByLink email has been sent successfully."
+msgstr ""
+
+#: templates/views/html-payment-installment.php:43
+msgid "To be paid immediately"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:281
+msgid ""
+"To secure payments, the latency period for manual capture is limited to 7 "
+"days. It is imperative to capture transactions before this deadline."
+msgstr ""
+
+#: templates/emails/email-paybylink.php:50
+#: templates/emails/plain/email-paybylink.php:41
+msgid "Total:"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:511
+#, php-format
+msgid "Transaction %s captured successfully via PayXpert."
+msgstr ""
+
+#: templates/views/html-transaction-list.php:21
+#: templates/views/html-order-transactions.php:12
+msgid "Transaction ID"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:472
+msgid "Transaction not found."
+msgstr ""
+
+#: includes/class-wc-payxpert.php:476
+msgid "Transaction operation must be `authorize`"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:439
+msgid "Transaction template not found."
+msgstr ""
+
+#: templates/views/myaccount/subscriptions.php:27
+msgid "Type"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:666
+msgid "Unauthorized"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:86
+msgid "User guide"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:368 includes/class-wc-payxpert.php:394
+#, php-format
+msgid "Waiting for instalment payments <span class=\"count\">(%s)</span>"
+msgid_plural ""
+"Waiting for instalment payments <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-wc-payxpert.php:646
+msgid "WC_Email_Payxpert_Paybylink not found"
+msgstr ""
+
+#. Author of the plugin
+msgid "We+"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:359
+msgid "Wechat"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:116
+msgid "Woocommerce Version:"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:128
+msgid "year(s)"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:125
+msgid "Yes"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:597
+msgid "You are not allowed to perform this action."
+msgstr ""
+
+#: templates/views/myaccount/subscriptions.php:74
+msgid "You have no active subscriptions."
+msgstr ""
+
+#: templates/emails/plain/email-paybylink.php:26
+msgid ""
+"You have requested to pay your order using PayByLink via PayXpert. Below are "
+"the details of your order and the payment link."
+msgstr ""
+
+#: templates/emails/email-paybylink.php:26
+msgid ""
+"You have requested to pay your order using PayByLink via PayXpert. Below are "
+"the details of your order and the secure payment link."
+msgstr ""
+
+#: includes/class-wc-payxpert.php:603
+msgid "Your order amount must be greater than 0 (PayXpert)"
+msgstr ""
+
+#: includes/class-wc-payxpert.php:599
+msgid "Your order must contain at least one product (PayXpert)"
+msgstr ""
+
+#: templates/views/html-settings-support-dialog.php:8
+msgid ""
+"Your request will be sent to PayXpert Support at assistance@payxpert.com. "
+"You will receive a notification that it has been taken into account, and our "
+"team will contact you via email."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:657
+msgid "Your support request was sent successfully."
+msgstr ""
