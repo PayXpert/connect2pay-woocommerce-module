@@ -132,17 +132,20 @@ class WC_Payxpert_Settings {
                     <input type="hidden" name="action" value="save_payxpert_settings" />
                     <input type="hidden" name="section" value="credentials" />
                     <?php wp_nonce_field('save_payxpert_settings_action', 'save_payxpert_settings_nonce'); ?>
+                    
+                    <h2><?php echo __('Your merchant account', 'payxpert'); ?></h2>
+                    <hr class="section-header">
 
                     <div class="form-group">
                         <label for="Originator_id">
-                            <?php echo __('Originator ID', 'payxpert'); ?>
+                            <?php echo __('Public API Key', 'payxpert'); ?>
                         </label>
                         <input type="text" id="payxpert_originator_id" name="payxpert_originator_id"
                             value="<?php echo get_option('payxpert_originator_id'); ?>" required />
                     </div>
                     <div class="form-group">
                         <label for="password">
-                            <?php echo __('Password', 'payxpert'); ?>
+                            <?php echo __('Private API Key', 'payxpert'); ?>
                         </label>
                         <input type="password" id="payxpert_password" name="payxpert_password"
                             value="<?php echo stripslashes(get_option('payxpert_password')); ?>" required />
