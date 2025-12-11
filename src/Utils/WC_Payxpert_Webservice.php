@@ -6,7 +6,6 @@ namespace Payxpert\Utils;
 
 defined( 'ABSPATH' ) || exit();
 
-use Payxpert\Classes\PayxpertConfiguration;
 use PayXpert\Connect2Pay\Connect2PayClient;
 use PayXpert\Connect2Pay\containers\constant\OperationType;
 use PayXpert\Connect2Pay\containers\constant\OrderShippingType;
@@ -14,16 +13,12 @@ use PayXpert\Connect2Pay\containers\constant\PaymentMethod;
 use PayXpert\Connect2Pay\containers\constant\PaymentMode;
 use PayXpert\Connect2Pay\containers\constant\SubscriptionType;
 use PayXpert\Connect2Pay\containers\Order as c2pOrder;
-use PayXpert\Connect2Pay\containers\request\ExportTransactionsRequest;
 use PayXpert\Connect2Pay\containers\request\PaymentPrepareRequest;
-use PayXpert\Connect2Pay\containers\response\PaymentStatus;
 use PayXpert\Connect2Pay\containers\response\TransactionAttempt;
 use PayXpert\Connect2Pay\containers\Shipping;
 use PayXpert\Connect2Pay\containers\Shopper;
 use Payxpert\Models\Payxpert_Payment_Token;
 use Payxpert\WC_Payxpert;
-use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
-use WC_Order;
 
 class WC_Payxpert_Webservice
 {
@@ -33,22 +28,24 @@ class WC_Payxpert_Webservice
     public static function preparePayment($configuration, $gateway, string $paymentMethod, string $paymentMode, $order = null, array $instalmentParameters = [], bool $isPayByLink = false)
     {
         if (is_null($order)) {
-            $billing = [
-                'first_name' => '',
-                'last_name'  => '',
-                'address_1'  => '',
-                'address_2'  => '',
-                'city'       => '',
-                'postcode'   => '',
-                'country'    => '',
-            ];
-            
-            $currency = get_woocommerce_currency();
-            $amount = (int) round(WC()->cart->get_total('edit') * 100);
             $customer = wp_get_current_user();
             $customer_id = $customer->ID;
-            $email = '';
-            $billing_phone = '';
+
+            $billing = [
+                'first_name' => get_user_meta($customer_id, 'billing_first_name', true),
+                'last_name'  => get_user_meta($customer_id, 'billing_last_name', true),
+                'address_1'  => get_user_meta($customer_id, 'billing_address_1', true),
+                'address_2'  => get_user_meta($customer_id, 'billing_address_2', true),
+                'city'       => get_user_meta($customer_id, 'billing_city', true),
+                'postcode'   => get_user_meta($customer_id, 'billing_postcode', true),
+                'country'    => get_user_meta($customer_id, 'billing_country', true),
+            ];
+
+            $email = get_user_meta($customer_id, 'billing_email', true);
+            $billing_phone = get_user_meta($customer_id, 'billing_phone', true);
+
+            $currency = get_woocommerce_currency();
+            $amount = (int) round(WC()->cart->get_total('edit') * 100);
             $order_id = 0;
         } else {
             $billing = $order->get_address('billing');
@@ -366,6 +363,26 @@ class WC_Payxpert_Webservice
             }
         }
 
+        $newestSeamlessLibrary = null;
+        $themes = $info->getThemes();
+
+        if ($themes) {
+            foreach ($themes as $theme) {
+                foreach ($theme->getSeamlessLibraries() as $seamlessLibrary) {
+
+                    $currentVersion = $seamlessLibrary->getVersion();
+
+                    if ($maxVersion === null || version_compare($currentVersion, $maxVersion, '>')) {
+                        $maxVersion = $currentVersion;
+                        $newestSeamlessLibrary = [
+                            'version' => $currentVersion,
+                            'hash' => $seamlessLibrary->getHash()
+                        ];
+                    }
+                }
+            }
+        }
+
         return [
             'name' => $info->getName(),
             'displayTerms' => $info->getDisplayTerms(),
@@ -380,6 +397,7 @@ class WC_Payxpert_Webservice
             'merchantNotificationTo' => $info->getMerchantNotificationTo(),
             'merchantNotificationLang' => $info->getMerchantNotificationLang(),
             'paymentMethods' => $paymentMethods,
+            'newestSeamlessLibrary' => $newestSeamlessLibrary
         ];
     }
 

@@ -3,6 +3,8 @@ require_once (dirname(__FILE__) . "/configuration.php");
 
 use PayXpert\Connect2Pay\Connect2PayClient;
 use PayXpert\Connect2Pay\containers\constant\OrderShippingType;
+use PayXpert\Connect2Pay\containers\constant\PaymentMethod;
+use PayXpert\Connect2Pay\containers\constant\PaymentMode;
 use PayXpert\Connect2Pay\containers\request\AliPayDirectProcessRequest;
 use WebSocket\Client;
 use PayXpert\Connect2Pay\containers\response\TransactionAttempt;
@@ -28,8 +30,8 @@ $realAliPayMode = (isset($aliPayDirectMode)) ? $aliPayDirectMode : AliPayDirectP
 // Transaction data
 $order->setId(date("Y-m-d-H.i.s"));
 
-$prepareRequest->setPaymentMethod(Connect2PayClient::PAYMENT_METHOD_ALIPAY);
-$prepareRequest->setPaymentMode(Connect2PayClient::PAYMENT_MODE_SINGLE);
+$prepareRequest->setPaymentMethod(PaymentMethod::ALIPAY);
+$prepareRequest->setPaymentMode(PaymentMode::SINGLE);
 $shopper->setId("1234567");
 $order->setShippingType(OrderShippingType::DIGITAL_GOODS);
 $prepareRequest->setAmount($amount);
@@ -84,6 +86,8 @@ if ($result !== false) {
       } else {
         echo "/!\ AliPay APP code not defined\n";
       }
+    } else if ($request->getMode() == AliPayDirectProcessRequest::MODE_SDK) {
+      $request->setSdkOsType(AliPayDirectProcessRequest::OS_TYPE_ANDROID);
     }
 
     $customerToken = $c2pClient->getCustomerToken();

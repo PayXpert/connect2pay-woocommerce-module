@@ -56,7 +56,7 @@ Si vos clés sont valides, vous pourrez accéder aux configurations avancées du
 ### 🛠 Dépendances
 
 - WooCommerce >= 7.6.0  
-- PHP >= 7.2  
+- PHP >= 7.4  
 - Un compte PayXpert valide
 
 ### 📜 Licence

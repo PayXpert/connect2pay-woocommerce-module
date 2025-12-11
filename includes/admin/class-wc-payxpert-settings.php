@@ -101,6 +101,12 @@ class WC_Payxpert_Settings {
 
                 delete_transient('payxpert_settings_saved');
             }
+
+            if (!$conn_status) {
+                echo '<div class="payxpert-notice notice notice-error is-dismissible">';
+                echo '<p>' . __('Account credentials are not valids.', 'payxpert') . '</p>';
+                echo '</div>';
+            }
             ?>
 
             <div class="block">
@@ -398,6 +404,11 @@ class WC_Payxpert_Settings {
                 'title'       => __('Installment Payment Settings', 'payxpert'),
                 'description' => '',
                 'fields'      => [
+                    'payxpert_installment_payment_logo_enabled' => [
+                        'type'    => 'checkbox',
+                        'label'   => __('Activate logo', 'payxpert'),
+                        'default' => 'no',
+                    ],
 
                     'payxpert_instalment_payment_min_amount' => [
                         'type'        => 'number',
@@ -578,8 +589,10 @@ class WC_Payxpert_Settings {
 
         if (isset($account['error'])) {
 			update_option('payxpert_conn_status', false);
+			update_option('payxpert_seamless_library', null);
 		} else {
 			update_option('payxpert_conn_status', true);
+			update_option('payxpert_seamless_library', json_encode($account['newestSeamlessLibrary']));
             set_transient('payxpert_settings_saved', true, 30);
 		}
     }

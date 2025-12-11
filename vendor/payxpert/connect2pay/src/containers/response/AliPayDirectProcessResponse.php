@@ -3,7 +3,6 @@
 namespace PayXpert\Connect2Pay\containers\response;
 
 use PayXpert\Connect2Pay\containers\Container;
-use PayXpert\Connect2Pay\containers\containers;
 
 class AliPayDirectProcessResponse extends Container
 {
@@ -141,7 +140,7 @@ class AliPayDirectProcessResponse extends Container
 
             // Transaction information
             if (isset($dataJson->transactionInfo)) {
-                $response->transactionInfo = containers\TransactionAttempt::getFromJson($dataJson->transactionInfo);
+                $response->transactionInfo = TransactionAttempt::getFromJson($dataJson->transactionInfo);
             }
         }
 

@@ -56,7 +56,7 @@ If your keys are valid, you will gain access to the module’s advanced settings
 ### 🛠 Dependencies
 
 - WooCommerce >= 7.6.0  
-- PHP >= 7.2  
+- PHP >= 7.4  
 - A valid PayXpert account
 
 ### 📜 License

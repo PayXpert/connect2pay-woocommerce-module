@@ -36,7 +36,13 @@ abstract class WC_Payment_Gateway_Payxpert_Installment extends WC_Payment_Gatewa
 
         $this->configuration = WC_Payxpert_Utils::get_configuration();
         $this->seamless      = ($this->configuration['payxpert_redirect_mode'] == WC_Payxpert::REDIRECT_MODE_SEAMLESS);
-        $this->icon          = plugins_url('assets/img/payment_method_logo/cc.jpg', WC_PAYXPERT_PLUGIN_NAME);
+        $this->icon          = $this->configuration['payxpert_installment_payment_logo_enabled'] == 'yes' ? 
+                                (
+                                    $this->configuration['payxpert_amex_enabled'] == 'yes' ? 
+                                    plugins_url('assets/img/payment_method_logo/cc.jpg', WC_PAYXPERT_PLUGIN_NAME)
+                                    : plugins_url('assets/img/payment_method_logo/ccnoamex.jpg', WC_PAYXPERT_PLUGIN_NAME)
+                                )
+                                : null;
 
         $this->title        = $this->configuration[$this->labelKey] ?? $this->method_title;
         $this->enabled      = $this->configuration[$this->enabledKey];

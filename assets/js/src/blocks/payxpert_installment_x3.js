@@ -140,7 +140,7 @@ const Label = (props) => {
 };
 
 const Icon = () => {
-	if (!Array.isArray(settings.icons) || settings.icons.length === 0) {
+	if (!Array.isArray(settings.icons) || settings.icons.length === 0 || !settings.icon_enabled) {
 		return null;
 	}
 

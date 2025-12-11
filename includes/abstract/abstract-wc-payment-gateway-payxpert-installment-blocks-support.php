@@ -63,8 +63,8 @@ abstract class WC_Payment_Gateway_Payxpert_Installment_Blocks_Support extends Ab
 
         $plugin_dir = dirname(__DIR__, 2);
         $paymentMethodLogoPath = plugin_dir_url($plugin_dir . '/payxpert.php') . 'assets/img/payment_method_logo';
-        $icons = [Payxpert_Payment_Transaction::VISA_ICON, Payxpert_Payment_Transaction::MASTERCARD_ICON];
 
+        $icons = [Payxpert_Payment_Transaction::VISA_ICON, Payxpert_Payment_Transaction::MASTERCARD_ICON];
         if ($this->gateway->configuration['payxpert_amex_enabled'] === 'yes') {
             $icons[] = Payxpert_Payment_Transaction::AMEX_ICON;
         }
@@ -76,6 +76,7 @@ abstract class WC_Payment_Gateway_Payxpert_Installment_Blocks_Support extends Ab
             'supports'    => array_filter($this->gateway->supports, [$this->gateway, 'supports']),
             'icons'       => $icons,
             'icon_path'   => $paymentMethodLogoPath,
+            'icon_enabled'=> $this->gateway->configuration['payxpert_installment_payment_logo_enabled'] === 'yes'
         );
     }
 }

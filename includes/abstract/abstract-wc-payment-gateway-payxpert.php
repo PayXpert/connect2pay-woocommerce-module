@@ -2,7 +2,6 @@
 
 use Payxpert\Exception\ConfigurationNotFoundException;
 use Payxpert\Exception\HandleFailedException;
-use Payxpert\Exception\HashFailedException;
 use Payxpert\Exception\PaymentCancellationException;
 use Payxpert\Exception\PaymentTokenExpiredException;
 use Payxpert\Exception\PaymentTokenNotFoundException;
@@ -21,6 +20,9 @@ if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
 }
 
 abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
+    const DEFAULT_SEAMLESS_VERSION = '1.6.1';
+    const DEFAULT_SEAMLESS_HASH = 'BRCgrkMLcVR8+KMJHI+9i9/QUuB1pF20M026MUoWXggnL1OKRKg9latpzAkuXz25';
+
 	public $configuration;
 	public $seamless;
 	
@@ -152,28 +154,30 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                 $status = $customData['status'];
             }
 
-            if ($handle['errorCode'] === Payxpert_Payment_Transaction::RESULT_CODE_SUCCESS) {
-                switch ($status) {
-                    case 'processing': 
-                        $order->payment_complete($handle['transaction']->getTransactionID());
-                    break;
-
-                    case WC_Payxpert::ORDER_STATUS_INSTALLMENT_PENDING:
-                        $order->set_transaction_id($handle['transaction']->getTransactionID());
-                        $order->add_meta_data('payxpert_installment', true);
-                    break;
-
-                    case WC_Payxpert::ORDER_STATUS_CAPTURE_PENDING:
-                        $order->add_meta_data('payxpert_capture', true);
-                        if ($customData['status'] == WC_Payxpert::ORDER_STATUS_INSTALLMENT_PENDING) {
-                            $order->add_meta_data('payxpert_installment', true);
-                        }
-                    break;
-                }
-                WC()->cart->empty_cart();
-            } else {
+            $updateStatus = true;
+            if ($handle['errorCode'] !== Payxpert_Payment_Transaction::RESULT_CODE_SUCCESS) {
                 $status = 'failed';
             }
+
+            switch ($status) {
+                case 'processing': 
+                    $order->payment_complete($handle['transaction']->getTransactionID());
+                    $updateStatus = false;
+                break;
+
+                case WC_Payxpert::ORDER_STATUS_INSTALLMENT_PENDING:
+                    $order->set_transaction_id($handle['transaction']->getTransactionID());
+                    $order->add_meta_data('payxpert_installment', true);
+                break;
+
+                case WC_Payxpert::ORDER_STATUS_CAPTURE_PENDING:
+                    $order->add_meta_data('payxpert_capture', true);
+                    if ($customData['status'] == WC_Payxpert::ORDER_STATUS_INSTALLMENT_PENDING) {
+                        $order->add_meta_data('payxpert_installment', true);
+                    }
+                break;
+            }
+            WC()->cart->empty_cart();
             
             $order->add_meta_data('payxpert_transaction_id', $handle['transaction']->getTransactionID());
             $order->add_meta_data('payxpert_payment_id', $handle['transaction']->getPaymentID());
@@ -191,7 +195,9 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                 $order->set_customer_user_agent( wc_get_user_agent() );
             }
 
-            $order->update_status($status, __('PayXpert transaction received.', 'payxpert'));
+            if ($updateStatus) {
+                $order->update_status($status, __('PayXpert transaction received.', 'payxpert'));
+            }
 
             $transaction = $handle['transaction'];
             $paymentMeanInfo = $transaction->getPaymentMeanInfo();
@@ -251,6 +257,13 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
     {
         if (is_checkout() && $this->seamless) {
             $ajaxUrl = admin_url('admin-ajax.php');
+            $seamlessConfig = json_decode(get_option('payxpert_seamless_library'), true);
+            $seamlessApi = [
+                'version' => $seamlessConfig['version'] ?? self::DEFAULT_SEAMLESS_VERSION,
+                'hash' => $seamlessConfig['hash'] ?? self::DEFAULT_SEAMLESS_HASH,
+            ];
+
+            wp_enqueue_style('payxpert-seamless-style', WC_PAYXPERT_ASSETS . 'css/seamless.css', [], WC_PAYXPERT_VERSION);
 
             if (!wp_script_is('payxpert-seamless', 'enqueued')) {
                 wp_register_script(
@@ -308,10 +321,10 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                             placeholder.appendChild(div);
 
                             const script = document.createElement('script');
-                            script.src = "https://connect2.payxpert.com/payment/" + token + "/connect2pay-seamless-v1.5.0.js";
+                            script.src = "https://connect2.payxpert.com/payment/" + token + "/connect2pay-seamless-v{$seamlessApi['version']}.js";
                             script.async = true;
                             script.setAttribute('data-mount-in', "#" + mountId);
-                            script.setAttribute('integrity', 'sha384-0IS2bunsGTTsco/UMCa56QRukMlq2pEcjUPMejy6WspCmLpGmsD3z0CmF5LQHF5X');
+                            script.setAttribute('integrity', "sha384-{$seamlessApi['hash']}");
                             script.setAttribute('crossorigin', 'anonymous');
                             script.setAttribute('data-payxpert-script', 1);
 

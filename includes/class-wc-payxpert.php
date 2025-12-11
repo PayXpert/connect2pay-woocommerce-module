@@ -184,6 +184,75 @@ class WC_Payxpert {
 
 			return $new_items;
 		} );
+
+		add_action( 'admin_footer' , array( $this, 'admin_footer' ));
+
+		add_action('wp_head', function () {
+			?>
+			<style>
+				/* Loader plein écran */
+				#iframe-redirect-loader {
+					position: fixed;
+					top: 0;
+					left: 0;
+					width: 100vw;
+					height: 100vh;
+					background: rgba(255, 255, 255, 1);
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					z-index: 9999;
+					font-family: sans-serif;
+					font-size: 20px;
+					color: #333;
+				}
+
+				/* Animation simple */
+				.loader-dot {
+					width: 12px;
+					height: 12px;
+					margin: 0 5px;
+					background: #333;
+					border-radius: 50%;
+					display: inline-block;
+					animation: bounce 0.6s infinite alternate;
+				}
+
+				.loader-dot:nth-child(2) { animation-delay: 0.2s; }
+				.loader-dot:nth-child(3) { animation-delay: 0.4s; }
+
+				@keyframes bounce {
+					from { transform: translateY(0); }
+					to { transform: translateY(-15px); }
+				}
+			</style>
+
+			<script>
+				document.addEventListener("DOMContentLoaded", function() {
+					if (window.self !== window.top) {
+						const redirectMsg = "<?php echo esc_js(__('Redirect in progress...', 'payxpert')); ?>";
+						
+						const loader = document.createElement('div');
+						loader.id = 'iframe-redirect-loader';
+						loader.innerHTML = `
+							${redirectMsg}
+							<div style="display:flex; margin-left:10px;">
+								<span class="loader-dot"></span>
+								<span class="loader-dot"></span>
+								<span class="loader-dot"></span>
+							</div>
+						`;
+						
+						document.body.appendChild(loader);
+						
+						// Redirection top-level immédiate
+						window.top.location = window.location.href;
+					}
+				});
+			</script>
+			<?php
+		});
+
 	}
 
 	public function action_links($links)
@@ -668,6 +737,8 @@ class WC_Payxpert {
 
 			$order->add_order_note(__('PayByLink email sent to the customer (PayXpert)', 'payxpert'));
 
+			update_post_meta($order->get_id(), '_payxpert_paybylink_last_sent', current_time('mysql'));
+			
 			if (is_admin()) {
 				set_transient('payxpert_admin_success', __('The PayByLink email has been sent successfully.', 'payxpert'), 60);
 			}
@@ -714,6 +785,47 @@ class WC_Payxpert {
 		$data = $gateway->get_seamless_data($order);
 
 		wp_send_json_success($data);
+	}
+
+	public function admin_footer() { 
+		global $theorder; 
+		
+		if (!($theorder instanceof \WC_Order)) return; 
+		
+		$order_id = $theorder->get_id(); // Récupérer la date du dernier envoi, ou autre info pertinente 
+		
+		// Récupère la date du dernier envoi (si existante)
+		$last_sent_date = get_post_meta($order_id, '_payxpert_paybylink_last_sent', true);
+		if ($last_sent_date) {
+			// Formate la date pour affichage lisible
+			$last_sent_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($last_sent_date));
+		
+			// Prépare le message traduisible
+			$message_base     = __('A payment link has already been sent', 'payxpert');
+			$last_sent_info   = $last_sent_date ? sprintf(__(' on %s', 'payxpert'), $last_sent_date) : '';
+			$message_continue = __('. Do you want to continue?', 'payxpert');
+			$full_message     = $message_base . $last_sent_info . $message_continue;
+			?>
+			<script>
+				jQuery(document).ready(function($){
+					var message = <?php echo json_encode($full_message); ?>;
+
+					// Intercepte le submit du formulaire contenant le select Actions de commande
+					$('#actions').closest('form').on('submit', function(e){
+						var selected = $(this).find('select[name="wc_order_action"]').val();
+
+						// Vérifie si c'est une action PayXpert
+						if(selected && selected.startsWith('payxpert_send_paybylink')){
+							if(!confirm(message)){
+								e.preventDefault(); // Stop le submit si annulation
+								return false;
+							}
+						}
+					});
+				});
+			</script>
+			<?php
+		}
 	}
 }
 
