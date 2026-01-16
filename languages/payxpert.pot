@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PayXpert payment gateway\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-11 09:02+0000\n"
+"POT-Creation-Date: 2026-01-15 16:25+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: \n"
@@ -67,11 +67,11 @@ msgstr ""
 msgid "Action"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:409
+#: includes/admin/class-wc-payxpert-settings.php:410
 msgid "Activate logo"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:525
+#: includes/admin/class-wc-payxpert-settings.php:526
 msgid "Activate merchant notification"
 msgstr ""
 
@@ -90,18 +90,18 @@ msgstr ""
 msgid "An error occured during the capture process : "
 msgstr ""
 
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:719
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:724
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:730
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:735
 msgid "An error occured during the refund process : "
 msgstr ""
 
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:652
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:660
 msgid ""
 "An error occured while trying to generate the payment link. Please try again "
 "or contact the support."
 msgstr ""
 
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:669
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:677
 msgid "An error occurred during payment preparation."
 msgstr ""
 
@@ -174,7 +174,7 @@ msgstr ""
 msgid "Currency"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:381
+#: includes/admin/class-wc-payxpert-settings.php:382
 msgid "Customization"
 msgstr ""
 
@@ -183,7 +183,7 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: src/Utils/WC_Payxpert_Utils.php:130
+#: src/Utils/WC_Payxpert_Utils.php:135
 msgid "day(s)"
 msgstr ""
 
@@ -207,11 +207,11 @@ msgstr ""
 msgid "Enable PayByLink"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:526
+#: includes/admin/class-wc-payxpert-settings.php:527
 msgid "Enable to receive notifications related to payment requests."
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:541
+#: includes/admin/class-wc-payxpert-settings.php:542
 msgid "English"
 msgstr ""
 
@@ -221,29 +221,65 @@ msgid ""
 "initiation of the capture (5 days after the transaction)."
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:533
+#: includes/admin/class-wc-payxpert-settings.php:534
 msgid "Enter the email address that will receive notifications."
 msgstr ""
 
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:748
+#: src/Utils/WC_Payxpert_Utils.php:361
+msgid "every 3 months"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:352
+msgid "every day"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:358
+msgid "every month"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:355
+msgid "every week"
+msgstr ""
+
+#: src/Utils/WC_Payxpert_Utils.php:364
+msgid "every year"
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:759
 msgid "Exception during refund: "
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:679
+#: includes/admin/class-wc-payxpert-settings.php:680
 msgid "Failed to initialize the email class."
+msgstr ""
+
+#. 1: frequency, 2: number of times
+#: src/Utils/WC_Payxpert_Utils.php:406
+#, php-format
+msgid "First payment today, then %1$s (%2$s times)."
+msgstr ""
+
+#. %s = frequency
+#: src/Utils/WC_Payxpert_Utils.php:398
+#, php-format
+msgid "First payment today, then %s."
 msgstr ""
 
 #: templates/views/html-settings-support-dialog.php:16
 msgid "Firstname"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:542
+#: includes/admin/class-wc-payxpert-settings.php:543
 msgid "French"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:455
-#: includes/admin/class-wc-payxpert-settings.php:483
-#: includes/admin/class-wc-payxpert-settings.php:512
+#: src/Utils/WC_Payxpert_Utils.php:367
+msgid "frequency not specified"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:456
+#: includes/admin/class-wc-payxpert-settings.php:484
+#: includes/admin/class-wc-payxpert-settings.php:513
 msgid "Front label"
 msgstr ""
 
@@ -253,7 +289,7 @@ msgstr ""
 msgid "Hello %s,"
 msgstr ""
 
-#: src/Utils/WC_Payxpert_Utils.php:131
+#: src/Utils/WC_Payxpert_Utils.php:136
 msgid "hour(s)"
 msgstr ""
 
@@ -269,9 +305,9 @@ msgstr ""
 msgid "IFrame"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:444
-#: includes/admin/class-wc-payxpert-settings.php:472
-#: includes/admin/class-wc-payxpert-settings.php:501
+#: includes/admin/class-wc-payxpert-settings.php:445
+#: includes/admin/class-wc-payxpert-settings.php:473
+#: includes/admin/class-wc-payxpert-settings.php:502
 msgid ""
 "Indicate the proportion to be paid in the first monthly payment. The "
 "remainder will be distributed equally between the other installments."
@@ -281,15 +317,15 @@ msgstr ""
 msgid "Initial Amount"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:438
+#: includes/admin/class-wc-payxpert-settings.php:439
 msgid "Installment 2x"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:466
+#: includes/admin/class-wc-payxpert-settings.php:467
 msgid "Installment 3x"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:495
+#: includes/admin/class-wc-payxpert-settings.php:496
 msgid "Installment 4x"
 msgstr ""
 
@@ -297,7 +333,7 @@ msgstr ""
 msgid "Installment Amount"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:404
+#: includes/admin/class-wc-payxpert-settings.php:405
 msgid "Installment Payment Settings"
 msgstr ""
 
@@ -341,7 +377,7 @@ msgstr ""
 msgid "Liability Shift"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:689
+#: includes/admin/class-wc-payxpert-settings.php:690
 msgid "Log file not found."
 msgstr ""
 
@@ -357,11 +393,11 @@ msgstr ""
 msgid "Manual"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:426
+#: includes/admin/class-wc-payxpert-settings.php:427
 msgid "Maximum amount for installment payment"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:427
+#: includes/admin/class-wc-payxpert-settings.php:428
 msgid "Maximum order amount to enable installment payment."
 msgstr ""
 
@@ -369,15 +405,15 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:415
+#: includes/admin/class-wc-payxpert-settings.php:416
 msgid "Minimum amount for installment payment"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:416
+#: includes/admin/class-wc-payxpert-settings.php:417
 msgid "Minimum order amount to enable installment payment."
 msgstr ""
 
-#: src/Utils/WC_Payxpert_Utils.php:132
+#: src/Utils/WC_Payxpert_Utils.php:137
 msgid "minute(s)"
 msgstr ""
 
@@ -389,7 +425,7 @@ msgstr ""
 msgid "Module Version:"
 msgstr ""
 
-#: src/Utils/WC_Payxpert_Utils.php:129
+#: src/Utils/WC_Payxpert_Utils.php:134
 msgid "month(s)"
 msgstr ""
 
@@ -407,7 +443,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:699
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:710
 msgid "No refundable transactions found for this order."
 msgstr ""
 
@@ -427,15 +463,15 @@ msgstr ""
 msgid "Non authorized action."
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:519
+#: includes/admin/class-wc-payxpert-settings.php:520
 msgid "Notification"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:539
+#: includes/admin/class-wc-payxpert-settings.php:540
 msgid "Notification language"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:532
+#: includes/admin/class-wc-payxpert-settings.php:533
 msgid "Notification recipient"
 msgstr ""
 
@@ -481,15 +517,15 @@ msgstr ""
 msgid "Order Summary"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:456
+#: includes/admin/class-wc-payxpert-settings.php:457
 msgid "Pay in 2 times"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:484
+#: includes/admin/class-wc-payxpert-settings.php:485
 msgid "Pay in 3 times"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:513
+#: includes/admin/class-wc-payxpert-settings.php:514
 msgid "Pay in 4 times"
 msgstr ""
 
@@ -506,7 +542,7 @@ msgstr ""
 msgid "Payment deadline:"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:386
+#: includes/admin/class-wc-payxpert-settings.php:387
 msgid "Payment label: Credit Card"
 msgstr ""
 
@@ -526,7 +562,11 @@ msgstr ""
 msgid "Payment Settings"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:387
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:601
+msgid "Payment token not found"
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:388
 msgid "Payment via Credit Card by PayXpert"
 msgstr ""
 
@@ -577,9 +617,9 @@ msgstr ""
 msgid "PayXpert Transactions List"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:443
-#: includes/admin/class-wc-payxpert-settings.php:471
-#: includes/admin/class-wc-payxpert-settings.php:500
+#: includes/admin/class-wc-payxpert-settings.php:444
+#: includes/admin/class-wc-payxpert-settings.php:472
+#: includes/admin/class-wc-payxpert-settings.php:501
 msgid "Percentage"
 msgstr ""
 
@@ -592,7 +632,7 @@ msgstr ""
 msgid "PHP Version:"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:644
+#: includes/admin/class-wc-payxpert-settings.php:645
 msgid "Please fill all required fields."
 msgstr ""
 
@@ -602,6 +642,10 @@ msgstr ""
 
 #: includes/admin/class-wc-payxpert-settings.php:154
 msgid "Private API Key"
+msgstr ""
+
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:607
+msgid "Processing Payment..."
 msgstr ""
 
 #: templates/emails/email-paybylink.php:45
@@ -629,7 +673,7 @@ msgstr ""
 msgid "Refundable amount"
 msgstr ""
 
-#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:739
+#: includes/abstract/abstract-wc-payment-gateway-payxpert.php:750
 #, php-format
 msgid "Refunded %s %s from transaction %s"
 msgstr ""
@@ -650,7 +694,7 @@ msgstr ""
 msgid "Save Settings"
 msgstr ""
 
-#: src/Utils/WC_Payxpert_Utils.php:133
+#: src/Utils/WC_Payxpert_Utils.php:138
 msgid "second(s)"
 msgstr ""
 
@@ -684,7 +728,7 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: includes/class-wc-payxpert.php:589 src/Utils/WC_Payxpert_Utils.php:252
+#: includes/class-wc-payxpert.php:589 src/Utils/WC_Payxpert_Utils.php:257
 msgid "Status updated after payment captured via PayXpert."
 msgstr ""
 
@@ -720,16 +764,20 @@ msgstr ""
 msgid "Thank you for your trust, %s."
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:648
+#: includes/admin/class-wc-payxpert-settings.php:649
 msgid "The email address is not valid."
 msgstr ""
 
 #: includes/class-wc-payxpert.php:660
-msgid "The order status must be `Waiting for paybylink payment (PayXpert)`"
+msgid "The order status must be `Waiting for payment` or `Failed`"
 msgstr ""
 
 #: includes/class-wc-payxpert.php:743
 msgid "The PayByLink email has been sent successfully."
+msgstr ""
+
+#: includes/admin/class-wc-payxpert-settings.php:376
+msgid "This payment method is not available yet in display mode: IFrame."
 msgstr ""
 
 #: templates/views/html-payment-installment.php:43
@@ -773,7 +821,7 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:684
+#: includes/admin/class-wc-payxpert-settings.php:685
 msgid "Unauthorized"
 msgstr ""
 
@@ -801,7 +849,7 @@ msgstr ""
 msgid "Woocommerce Version:"
 msgstr ""
 
-#: src/Utils/WC_Payxpert_Utils.php:128
+#: src/Utils/WC_Payxpert_Utils.php:133
 msgid "year(s)"
 msgstr ""
 
@@ -809,7 +857,7 @@ msgstr ""
 msgid "Yes"
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:615
+#: includes/admin/class-wc-payxpert-settings.php:616
 msgid "You are not allowed to perform this action."
 msgstr ""
 
@@ -848,6 +896,6 @@ msgid ""
 "team will contact you via email."
 msgstr ""
 
-#: includes/admin/class-wc-payxpert-settings.php:675
+#: includes/admin/class-wc-payxpert-settings.php:676
 msgid "Your support request was sent successfully."
 msgstr ""

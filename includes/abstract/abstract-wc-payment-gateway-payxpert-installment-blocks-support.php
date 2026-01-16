@@ -2,6 +2,7 @@
 
 use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
 use Payxpert\Models\Payxpert_Payment_Transaction;
+use Payxpert\Utils\WC_Payxpert_Utils;
 
 defined('ABSPATH') || exit;
 
@@ -63,12 +64,8 @@ abstract class WC_Payment_Gateway_Payxpert_Installment_Blocks_Support extends Ab
 
         $plugin_dir = dirname(__DIR__, 2);
         $paymentMethodLogoPath = plugin_dir_url($plugin_dir . '/payxpert.php') . 'assets/img/payment_method_logo';
-
-        $icons = [Payxpert_Payment_Transaction::VISA_ICON, Payxpert_Payment_Transaction::MASTERCARD_ICON];
-        if ($this->gateway->configuration['payxpert_amex_enabled'] === 'yes') {
-            $icons[] = Payxpert_Payment_Transaction::AMEX_ICON;
-        }
-
+        $icons = WC_Payxpert_Utils::get_gateway_block_icons($this->gateway->configuration);
+  
         return array(
             'title'       => $this->get_setting('title', $this->gateway->title),
             'description' => $description,

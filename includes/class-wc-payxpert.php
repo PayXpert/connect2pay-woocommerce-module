@@ -605,7 +605,7 @@ class WC_Payxpert {
 
 		if (
 			$theorder instanceof \WC_Order
-			&& $theorder->has_status('pending')
+			&& ($theorder->has_status('pending') || $theorder->has_status('failed'))
 			&& $theorder->get_customer_id() > 0 // Order has a customer
 			&& $configuration['payxpert_paybylink_enabled'] === 'yes'
 		) {
@@ -656,8 +656,8 @@ class WC_Payxpert {
 		try {
 			$configuration = WC_Payxpert_Utils::get_configuration();
 
-			if (!$order->has_status('pending')) {
-				throw new \Exception(__('The order status must be `Waiting for paybylink payment (PayXpert)`', 'payxpert'));
+			if (!$order->has_status('pending') && !$order->has_status('failed')) {
+				throw new \Exception(__('The order status must be `Waiting for payment` or `Failed`', 'payxpert'));
 			}
 
 			if ($order->get_customer_id() == 0) {

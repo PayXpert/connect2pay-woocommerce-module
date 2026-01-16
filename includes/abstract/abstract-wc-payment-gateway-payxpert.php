@@ -16,37 +16,37 @@ use Payxpert\WC_Payxpert;
 defined( 'ABSPATH' ) || exit();
 
 if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
-	return;
+    return;
 }
 
 abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
     const DEFAULT_SEAMLESS_VERSION = '1.6.1';
     const DEFAULT_SEAMLESS_HASH = 'BRCgrkMLcVR8+KMJHI+9i9/QUuB1pF20M026MUoWXggnL1OKRKg9latpzAkuXz25';
 
-	public $configuration;
-	public $seamless;
-	
-	public function admin_options()
-	{
-		wp_redirect(admin_url('admin.php?page=payxpert-settings'));
+    public $configuration;
+    public $seamless;
+    
+    public function admin_options()
+    {
+        wp_redirect(admin_url('admin.php?page=payxpert-settings'));
         exit;
-	}	
+    }	
 
-	public function process_admin_options()
-	{
-		parent::process_admin_options();
-	}
+    public function process_admin_options()
+    {
+        parent::process_admin_options();
+    }
 
-	public function callback()
-	{
-		if (isset($_GET['payxpert_return']) && $_GET['payxpert_return'] === '1') {
+    public function callback()
+    {
+        if (isset($_GET['payxpert_return']) && $_GET['payxpert_return'] === '1') {
             $this->handleFrontRedirect();
         } else {
             $this->handleIPN();
         }
-	}
+    }
 
-	public function handleFrontRedirect() {
+    public function handleFrontRedirect() {
         WC_Payxpert_Logger::info('FrontRedirect');
 
         try {
@@ -150,7 +150,7 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                 $status = WC_Payxpert::ORDER_STATUS_CAPTURE_PENDING;
             }
 
-			if (isset($customData['status'])) {
+            if (isset($customData['status'])) {
                 $status = $customData['status'];
             }
 
@@ -262,6 +262,10 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                 'version' => $seamlessConfig['version'] ?? self::DEFAULT_SEAMLESS_VERSION,
                 'hash' => $seamlessConfig['hash'] ?? self::DEFAULT_SEAMLESS_HASH,
             ];
+            $applePayEnabled = json_encode(
+                isset($this->configuration['payxpert_applepay_enabled'])
+                && $this->configuration['payxpert_applepay_enabled'] === 'yes'
+            );
 
             wp_enqueue_style('payxpert-seamless-style', WC_PAYXPERT_ASSETS . 'css/seamless.css', [], WC_PAYXPERT_VERSION);
 
@@ -269,7 +273,9 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                 wp_register_script(
                     'payxpert-seamless',
                     '', // set Dynamicaly
-                    ['jquery'],
+                    [
+                        'jquery',
+                    ],
                     null,
                     true
                 );
@@ -295,7 +301,6 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
 
                         const placeholder = container.querySelector('.payxpert-placeholder');
                         if (!token || !placeholder || !externalPaymentButton) return;
-
 
                         function buildIframe(enableApplePay) {
                             placeholder.innerHTML = '';
@@ -331,20 +336,11 @@ abstract class WC_Payment_Gateway_Payxpert extends WC_Payment_Gateway {
                             document.body.appendChild(script);
                         }
 
-                        // Vérifie Apple Pay uniquement si activé dans la config PHP
-                        const applePayEnabled = ($this->configuration['payxpert_applepay_enabled'] === 'yes' ? 'true' : 'false');
+                        // #45580: not available yet
+                        // const applePayEnabled = {$applePayEnabled};
+                        const applePayEnabled = false; 
 
-                        if (applePayEnabled && typeof sdpx !== 'undefined' && typeof sdpx.isApplePayAvailable === 'function') {
-                            sdpx.isApplePayAvailable().then((response) => {
-                                const available = response?.responseCode === "00";
-                                buildIframe(available);
-                            }).catch((err) => {
-                                console.warn('ApplePay check failed');
-                                buildIframe(false);
-                            });
-                        } else {
-                            buildIframe(false);
-                        }
+                        buildIframe(applePayEnabled);
 
                         if (intercept) {
                             interceptPlaceOrderClickForPayxpert();
@@ -589,6 +585,8 @@ JS
 
     public function process_payment_seamless($order_id) 
     {
+        WC_Payxpert_Logger::info('SEAMLESS');
+
         global $wpdb;
         $merchant_token = sanitize_text_field($_POST[$this->id . '_merchant_token'] ?? '');
         $customer_token = sanitize_text_field($_POST[$this->id . '_customer_token'] ?? '');
@@ -596,14 +594,17 @@ JS
         $payment_token = Payxpert_Payment_Token::findByMerchantTokenAndCustomerToken($merchant_token, $customer_token);
 
         if (is_null($payment_token)) {
+            WC_Payxpert_Logger::info('Payment TOKEN not found');
+
             return [
                 'result' => 'failure',
-                'message' => __('Payment token not found')
+                'message' => __('Payment token not found', 'payxpert')
             ];
         }
 
         if ($payment_token['order_id'] != $order_id) {
-            wc_add_notice( __('Progressing Payment....'), 'notice');
+            WC_Payxpert_Logger::info('Update payment_token.order_id : ' . (int) $order_id);
+            wc_add_notice( __('Processing Payment...', 'payxpert'), 'notice');
 
             // Update Payxpert_Payment_Token.order_id in DB with real wc_order_id
             $wpdb->update(
@@ -622,21 +623,28 @@ JS
 
         $order = wc_get_order($order_id);
         if ( in_array( $order->get_status(), [ 'processing', 'completed' ], true ) ) {
+            WC_Payxpert_Logger::info('Redirect on order_received_url');
+
             return [
                 'result' => 'success',
                 'redirect' => $order->get_checkout_order_received_url()
             ];
         }
         
+        WC_Payxpert_Logger::info('Not yet managed');
         return;
     }
 
     public function process_payment_cc($gateway, $order_id, $payment_method, $payment_mode, $instalment_parameters = []) 
     {
+        WC_Payxpert_Logger::info('Process payment call');
+
         if ( $this->seamless ) {
-			return $this->process_payment_seamless($order_id);
-		} 
-		
+            return $this->process_payment_seamless($order_id);
+        }
+
+        WC_Payxpert_Logger::info('REDIRECTION');
+        
         // Redirect to PayXpert gateway
         $preparedPayment = WC_Payxpert_Webservice::preparePayment(
             $this->configuration,
@@ -650,7 +658,7 @@ JS
 
         if (isset($preparedPayment['error'])) {
             wc_add_notice(__('An error occured while trying to generate the payment link. Please try again or contact the support.', 'payxpert'), 'error');
-            WC_Payxpert_Logger::error('Erreur API PayXpert : ' . $preparedPayment['error']);
+            WC_Payxpert_Logger::critical('Erreur API PayXpert : ' . $preparedPayment['error']);
 
             return ['result' => 'failure'];
         }
@@ -684,8 +692,11 @@ JS
     }
 
     public function process_refund($order_id, $amount = null, $reason = '') {
+        WC_Payxpert_Logger::info('Process refund on order ID : ' . (int) $order_id);
+        
         $order = wc_get_order($order_id);
         if (!$order || !$amount) {
+            WC_Payxpert_Logger::info('Order or Amount to refund not found');
             return false;
         }
 

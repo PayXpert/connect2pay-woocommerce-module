@@ -39,9 +39,7 @@ class WC_Payment_Gateway_Payxpert_CC extends WC_Payment_Gateway_Payxpert {
 
         $this->seamless = ($this->configuration['payxpert_redirect_mode'] == WC_Payxpert::REDIRECT_MODE_SEAMLESS);
         $this->has_fields = $this->seamless;
-        $this->icon = $this->configuration['payxpert_amex_enabled'] == 'yes' ? 
-            plugins_url('assets/img/payment_method_logo/cc.jpg', WC_PAYXPERT_PLUGIN_NAME)
-            : plugins_url('assets/img/payment_method_logo/ccnoamex.jpg', WC_PAYXPERT_PLUGIN_NAME);
+        $this->icon = WC_Payxpert_Utils::get_gateway_icon_name($this->configuration, $this->id);
 
         // Settings save
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options']);

@@ -373,6 +373,7 @@ class WC_Payxpert_Settings {
                         'type'    => 'checkbox',
                         'label'   => __('Applepay', 'payxpert'),
                         'default' => 'no',
+                        'description' => __('This payment method is not available yet in display mode: IFrame.', 'payxpert'),
                     ],
                 ],
             ],

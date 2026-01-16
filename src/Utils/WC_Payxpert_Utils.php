@@ -9,6 +9,11 @@ defined( 'ABSPATH' ) || exit();
 use DateInterval;
 use Payxpert\Models\Payxpert_Payment_Transaction;
 use Payxpert\Models\Payxpert_Subscription;
+use WC_Order;
+use WC_Order_Item_Shipping;
+use WC_Payment_Gateway_Payxpert_Installment_X2;
+use WC_Payment_Gateway_Payxpert_Installment_X3;
+use WC_Payment_Gateway_Payxpert_Installment_X4;
 
 require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/admin/class-wc-payxpert-settings.php';
 
@@ -262,5 +267,197 @@ class WC_Payxpert_Utils
         $max = $configuration['payxpert_instalment_payment_max_amount'];
 
         return $min < $amount && (!$max || $max >= $amount);
+    }
+
+    public static function has_subscription_in_cart( $cart, $return_meta = false ) {
+        return self::get_subscription_from_items(
+            $cart,
+            fn( $item ) => $item['data'],
+            fn( $item ) => $item['quantity'],
+            $return_meta
+        );
+    }
+
+    public static function has_subscription_in_order( $order, $return_meta = false ) {
+        if ( ! $order instanceof WC_Order ) {
+            return false;
+        }
+
+        return self::get_subscription_from_items(
+            $order->get_items(),
+            fn( $item ) => $item->get_product(),
+            fn( $item ) => $item->get_quantity(),
+            $return_meta
+        );
+    }
+
+    private static function get_subscription_from_items( $items, callable $get_product, callable $get_quantity, $return_meta = false ) {
+        foreach ( $items as $item ) {
+
+            $product = $get_product( $item );
+            if ( ! $product ) {
+                continue;
+            }
+
+            if ( $product->get_meta( '_payxpert_subscription' ) === 'yes' ) {
+
+                if ( ! $return_meta ) {
+                    return true;
+                }
+
+                $subscription_meta = [];
+
+                foreach ( $product->get_meta_data() as $meta ) {
+                    if ( strpos( $meta->key, '_payxpert_subscription' ) === 0 ) {
+                        $subscription_meta[ $meta->key ] = $meta->value;
+                    }
+                }
+
+                $subscription_meta['quantity'] = $get_quantity( $item );
+
+                return $subscription_meta;
+            }
+        }
+
+        return false;
+    }
+
+
+    public static function get_period_by_frequency($frequency)
+    {
+        $frequency_map = [
+            // Journalier
+            'daily' => 'P1D',
+            'weekly' => 'P1W',
+            'monthly' => 'P1M',
+            'quarterly' => 'P3M',
+            'yearly' => 'P12M'
+        ];
+
+        return $frequency_map[$frequency];
+    }
+
+    /**
+     * Convert a subscription frequency code into human-readable English text.
+     * Translatable via WordPress.
+     *
+     * @param string $frequency
+     * @return string
+     */
+    public static function get_humanize_subscription_frequency( $frequency ) {
+
+        switch ( $frequency ) {
+
+            case 'daily':
+                return __( "every day", 'payxpert' );
+
+            case 'weekly':
+                return __( "every week", 'payxpert' );
+
+            case 'monthly':
+                return __( "every month", 'payxpert' );
+
+            case 'quarterly':
+                return __( "every 3 months", 'payxpert' );
+
+            case 'yearly':
+                return __( "every year", 'payxpert' );
+
+            default:
+                return __( "frequency not specified", 'payxpert' );
+        }
+    }
+
+    /**
+     * Return a human-readable first payment description.
+     * Translatable via WordPress.
+     *
+     * @param string $rule
+     * @param string $frequency
+     * @param string $durationType  'finite' | 'infinite'
+     * @param int|string $for       Number of occurrences (e.g. 5)
+     * @return string
+     */
+    public static function get_subscription_first_payment_text(
+        $rule,
+        $frequency,
+        $durationType,
+        $for
+    ) {
+        $frequency_text = self::get_humanize_subscription_frequency( $frequency );
+
+        // Only handling "immediate" for now
+        if ( $rule !== 'immediate' && ! empty( $rule ) ) {
+            return esc_html__( $rule, 'payxpert' );
+        }
+
+        // Infinite duration
+        if ( $durationType === 'infinite' ) {
+            return sprintf(
+                /* translators: %s = frequency */
+                __( 'First payment today, then %s.', 'payxpert' ),
+                $frequency_text
+            );
+        }
+
+        // Finite duration (X times)
+        return sprintf(
+            /* translators: 1: frequency, 2: number of times */
+            __( 'First payment today, then %1$s (%2$s times).', 'payxpert' ),
+            $frequency_text,
+            esc_html( $for )
+        );
+    }
+
+        /**
+     * Retourne le nom du fichier de l’icône PayXpert selon la configuration et la gateway
+     *
+     * @param array  $configuration Configuration de la gateway
+     * @param string $gateway_id    ID de la gateway
+     *
+     * @return string|null Nom du fichier (ex: cc.png)
+     */
+    public static function get_gateway_icon_name(array $configuration, string $gateway_id)
+    {
+        if (in_array($gateway_id, [
+            WC_Payment_Gateway_Payxpert_Installment_X2::ID,
+            WC_Payment_Gateway_Payxpert_Installment_X3::ID,
+            WC_Payment_Gateway_Payxpert_Installment_X4::ID,
+        ])) {
+            return null;
+        }
+
+        $hasAmex = isset($configuration['payxpert_amex_enabled']) 
+                    ? $configuration['payxpert_amex_enabled'] === 'yes' 
+                    : true;
+
+        $hasApplePay = isset($configuration['payxpert_applepay_enabled']) 
+                    ? $configuration['payxpert_applepay_enabled'] === 'yes' 
+                    : false;
+
+        $icon = 'cc'; // défaut
+
+        if (!$hasAmex && !$hasApplePay) {
+            $icon = 'cc-no-amex-no-applepay';
+        } elseif (!$hasAmex) {
+            $icon = 'cc-no-amex';
+        } elseif (!$hasApplePay) {
+            $icon = 'cc-no-applepay';
+        }
+
+        return plugins_url('assets/img/payment_method_logo/' . $icon . '.jpg', WC_PAYXPERT_PLUGIN_NAME);
+    }
+
+    public static function get_gateway_block_icons(array $configuration)
+    {
+        $icons = [Payxpert_Payment_Transaction::VISA_ICON, Payxpert_Payment_Transaction::MASTERCARD_ICON];
+        if ($configuration['payxpert_amex_enabled'] === 'yes') {
+            $icons[] = Payxpert_Payment_Transaction::AMEX_ICON;
+        }
+        if ($configuration['payxpert_applepay_enabled'] === 'yes') {
+			$icons[] = Payxpert_Payment_Transaction::APPLEPAY_ICON;
+		}
+
+        return $icons;
     }
 }

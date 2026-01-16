@@ -43,7 +43,6 @@ class WC_Payxpert_Webservice
 
             $email = get_user_meta($customer_id, 'billing_email', true);
             $billing_phone = get_user_meta($customer_id, 'billing_phone', true);
-
             $currency = get_woocommerce_currency();
             $amount = (int) round(WC()->cart->get_total('edit') * 100);
             $order_id = 0;
@@ -57,6 +56,12 @@ class WC_Payxpert_Webservice
             $billing_phone = $order->get_billing_phone();
             $order_id = $order->get_id();
         }
+
+        $billing = array_map(function($value) {
+            return $value === false ? '' : $value;
+        }, $billing);
+
+        $billing_phone = $billing_phone ?: '';
         
         // Param Shopper
         $shopper = new Shopper();

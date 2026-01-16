@@ -4,7 +4,7 @@
  * Description:
  * Author: We+
  * Author URI: https://alan-allman.com/en/cabinet/we/
- * Version: 2.2.0
+ * Version: 2.2.2
  * Requires Plugins: woocommerce
  * WC requires at least: 7.6.0
  */
@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit ();
 define( 'WC_PAYXPERT_PLUGIN_FILE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_PAYXPERT_ASSETS', plugin_dir_url( __FILE__ ) . 'assets/' );
 define( 'WC_PAYXPERT_PLUGIN_NAME', plugin_basename( __FILE__ ) );
-define( 'WC_PAYXPERT_VERSION', '2.2.0' );
+define( 'WC_PAYXPERT_VERSION', '2.2.2' );
 
 require_once( WC_PAYXPERT_PLUGIN_FILE_PATH . 'vendor/autoload.php' );
 

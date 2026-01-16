@@ -20,6 +20,7 @@ class Payxpert_Payment_Transaction extends Payxpert_Abstract_Model {
     const AMEX_ICON = 'amex.png';
     const VISA_ICON = 'visa.png';
     const MASTERCARD_ICON = 'mastercard.png';
+    const APPLEPAY_ICON = 'applepay.png';
 
     protected $fillable = [
         'id_payxpert_payment_transaction',
