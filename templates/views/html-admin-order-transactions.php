@@ -1,4 +1,8 @@
-<?php if (!defined('ABSPATH')) exit; 
+<?php
+
+use Payxpert\Models\Payxpert_Payment_Transaction;
+
+ if (!defined('ABSPATH')) exit; 
 
 $show_actions = !empty($orderTransactionsFormatted['capturable']);
 ?>
@@ -43,7 +47,7 @@ $show_actions = !empty($orderTransactionsFormatted['capturable']);
             <td class="text-center"><?php echo esc_html($transaction['transaction_referal_id'] ?? ''); ?></td>
             <td><?php echo esc_html(date_i18n('d/m/Y H:i:s', strtotime($transaction['date_add']))); ?></td>
             <td><?php echo esc_html(ucfirst($transaction['operation'])); ?></td>
-            <td class="text-right"><?php echo ($transaction['operation'] === 'refund' ? '-' : '') . $amount; ?></td>
+            <td class="text-right"><?php echo ($transaction['operation'] === Payxpert_Payment_Transaction::OPERATION_REFUND ? '-' : '') . $amount; ?></td>
             <td class="text-right"><?php echo $refundable; ?></td>
             <td class="text-center"><?php echo esc_html($transaction['currency']); ?></td>
             <td class="text-center"><?php echo $badge_status; ?></td>

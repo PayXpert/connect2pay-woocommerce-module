@@ -19,34 +19,36 @@ require_once WC_PAYXPERT_PLUGIN_FILE_PATH . 'includes/admin/class-wc-payxpert-se
 
 class WC_Payxpert_Utils
 {
+    public const IPN_SECRET_OPTION_KEY = 'payxpert_ipn_secret';
+
     public static function build_instalment_schedule($amount, $firstPercentage, $xTimes)
     {
         $schedule = [];
         $date = new \DateTime();
 
-        // Récupérer la devise active de WooCommerce
+        // Active WooCommerce currency.
         $currency = get_woocommerce_currency();
 
-        // Vérification basique
+        // Basic validation.
         if (!$currency) {
             throw new \Exception('Currency not found.');
         }
 
-        // Calculer les montants
+        // Compute instalment amounts.
         list($instalmentFirstAmount, $rebillAmount) = self::calculate_instalment_amounts(
             (int) round($amount * 100),
             intval($firstPercentage),
             $xTimes
         );
 
-        // Premier paiement
+        // First instalment.
         $schedule[] = [
             'amount' => $instalmentFirstAmount / 100,
             'amountFormatted' => wc_price($instalmentFirstAmount / 100, ['currency' => $currency]),
             'date' => date_i18n(get_option('date_format'), $date->getTimestamp()),
         ];
 
-        // Les paiements suivants
+        // Following instalments.
         for ($i = 0; $i < $xTimes - 1; ++$i) {
             $date->modify('+30 days');
 
@@ -111,6 +113,52 @@ class WC_Payxpert_Utils
     {
         $options = self::get_configuration();
         return $options[$key] ?? $default;
+    }
+
+    /**
+     * Translate customizable text options when a multilingual plugin is available.
+     * Falls back to the original value when no integration exists.
+     */
+    public static function translate_custom_text(string $value, string $name): string
+    {
+        if ($value === '') {
+            return $value;
+        }
+
+        $context = 'PayXpert';
+        $sourceValue = $value;
+
+        if (function_exists('pll_register_string')) {
+            pll_register_string($name, $sourceValue, $context);
+        }
+
+        if (function_exists('pll__')) {
+            $value = (string) pll__($sourceValue);
+        }
+
+        if (has_action('wpml_register_single_string')) {
+            do_action('wpml_register_single_string', $context, $name, $sourceValue);
+        }
+
+        if (has_filter('wpml_translate_single_string')) {
+            $value = (string) apply_filters('wpml_translate_single_string', $value, $context, $name);
+        }
+
+        return $value;
+    }
+
+    public static function ensure_ipn_secret(): string
+    {
+        $secret = (string) get_option(self::IPN_SECRET_OPTION_KEY, '');
+        if (strlen($secret) >= 43) {
+            return $secret;
+        }
+
+        // 32 random bytes encoded in base64url gives >= 43 chars.
+        $secret = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        update_option(self::IPN_SECRET_OPTION_KEY, $secret, false);
+
+        return $secret;
     }
 
     public static function to_snake_case_keys(array $array): array {
@@ -209,57 +257,161 @@ class WC_Payxpert_Utils
             && \Automattic\WooCommerce\Utilities\FeaturesUtil::feature_is_enabled('custom_order_tables');
     }
 
-    public static function sync_subscription(array $subscription, array $firstTransaction)
+    public static function sync_subscription(array $configuration, array $subscription, array $firstTransaction)
     {
         $updated = false;
+        $subscriptionType = $subscription['subscription']['subscriptionType'] ?? null;
 
+        // Closure to persist a PayXpert transaction row.
+        $createTransaction = function(array $firstTransactionData, array $subTransactionData, $orderId = null) {
+            $transaction = new Payxpert_Payment_Transaction();
+            $transaction->set(array_merge(
+                $firstTransactionData,
+                [
+                    'id_payxpert_payment_transaction' => null,
+                    'order_id' => $orderId ?? $subTransactionData['order_id'],
+                    'transaction_id' => $subTransactionData['transactionID'],
+                    'transaction_referal_id' => $subTransactionData['referralID'],
+                    'amount' => (float) ($subTransactionData['amount']/100),
+                    'result_code' => $subTransactionData['errorCode'],
+                    'result_message' => $subTransactionData['status'],
+                    'date_add' => date('Y-m-d H:i:s', $subTransactionData['date']),
+                    'card_number' => $subTransactionData['paymentMeanInfo']['cardNumber'],
+                    'card_brand' => $subTransactionData['paymentMeanInfo']['cardBrand'],
+                ]
+            ));
+            $transaction->save();
+        };
+
+        // Reference order for non-instalment subscription types.
+        $originalOrder = null;
+        if ($subscriptionType !== 'partpayment') {
+            $originalOrder = wc_get_order($firstTransaction['order_id']);
+        }
+
+        // Iterate API transaction list.
         foreach ($subscription['transactionList'] as $subscriptionTransaction) {
+            // Skip the first (already stored) transaction.
             if ($subscriptionTransaction['transactionID'] == $firstTransaction['transaction_id']) {
                 continue;
             }
 
-            $transactionExist = Payxpert_Payment_Transaction::findByTransactionId((string) $subscriptionTransaction['transactionID']);
-            if (!$transactionExist) {
-                $payxpertPaymentTransaction = new Payxpert_Payment_Transaction();
-                $payxpertPaymentTransaction->set(
-                    array_merge(
-                        $firstTransaction,
+            // Skip if already imported.
+            $transactionExist = Payxpert_Payment_Transaction::findByTransactionId((string)$subscriptionTransaction['transactionID']);
+            if ($transactionExist) {
+                continue;
+            }
+
+            $orderId = null;
+
+            // Non-instalment: create a child order per renewal transaction.
+            if ($subscriptionType !== 'partpayment' && $originalOrder) {
+                $newOrder = wc_create_order();
+
+                // Copy line items.
+                foreach ($originalOrder->get_items() as $item) {
+                    $newOrder->add_product(
+                        $item->get_product(),
+                        $item->get_quantity(),
                         [
-                            'id_payxpert_payment_transaction' => null,
-                            'transaction_id' => $subscriptionTransaction['transactionID'],
-                            'transaction_referal_id' => $subscriptionTransaction['referralID'],
-                            'amount' => (float) ($subscriptionTransaction['amount']/100),
-                            'result_code' => $subscriptionTransaction['errorCode'],
-                            'result_message' => $subscriptionTransaction['status'],
-                            'date_add' => date('Y-m-d H:i:s', $subscriptionTransaction['date'])
+                            'subtotal' => $item->get_subtotal(),
+                            'total' => $item->get_total(),
+                            'tax' => $item->get_total_tax(),
                         ]
-                    )
-                );
-                WC_Payxpert_Logger::info('Create transaction [transactionID : ' . $subscriptionTransaction['transactionID'] . ']');
-                $payxpertPaymentTransaction->save();
-                $updated = true;
+                    );
+                }
+
+                foreach ( $originalOrder->get_items('shipping') as $shipping_item_id => $shipping_item ) {
+                    $new_shipping_item = new WC_Order_Item_Shipping();
+                    
+                    // Copy shipping line from the original order.
+                    $new_shipping_item->set_method_title( $shipping_item->get_method_title() );
+                    $new_shipping_item->set_method_id( $shipping_item->get_method_id() );
+                    $new_shipping_item->set_total( $shipping_item->get_total() );
+                    $new_shipping_item->set_taxes( $shipping_item->get_taxes() );
+                    
+                    $newOrder->add_item( $new_shipping_item );
+                }
+
+                $current_user_id = $originalOrder->get_user_id();
+                $shipping_address = [
+                    'first_name' => get_user_meta($current_user_id, 'shipping_first_name', true),
+                    'last_name'  => get_user_meta($current_user_id, 'shipping_last_name', true),
+                    'company'    => get_user_meta($current_user_id, 'shipping_company', true),
+                    'address_1'  => get_user_meta($current_user_id, 'shipping_address_1', true),
+                    'address_2'  => get_user_meta($current_user_id, 'shipping_address_2', true),
+                    'city'       => get_user_meta($current_user_id, 'shipping_city', true),
+                    'postcode'   => get_user_meta($current_user_id, 'shipping_postcode', true),
+                    'country'    => get_user_meta($current_user_id, 'shipping_country', true),
+                    'state'      => get_user_meta($current_user_id, 'shipping_state', true),
+                ];
+
+                $newOrder->set_address($originalOrder->get_address('billing'), 'billing');
+                $newOrder->set_address($shipping_address, 'shipping');
+                $newOrder->set_customer_id($originalOrder->get_customer_id());
+                $newOrder->set_payment_method($originalOrder->get_payment_method());
+                $newOrder->set_payment_method_title($originalOrder->get_payment_method_title());
+                $newOrder->set_parent_id($firstTransaction['order_id']);
+                $newOrder->set_date_paid(date('Y-m-d H:i:s', $subscriptionTransaction['date']));
+                $newOrder->add_meta_data('payxpert_transaction_id', $subscriptionTransaction['transactionID']);
+
+                $transactionInfo = WC_Payxpert_Webservice::get_transaction_info($configuration, $subscriptionTransaction['transactionID']);
+                if (empty($transactionInfo['error'])) {
+                    $newOrder->add_meta_data('payxpert_payment_id', $transactionInfo['payment_id']);
+                }
+
+                $is_success = $subscriptionTransaction['errorCode'] == Payxpert_Payment_Transaction::RESULT_CODE_SUCCESS;
+                
+                $newOrder->calculate_totals();
+                // Sub price might be different from total_product + total_shipping
+                $newOrder->set_total(wc_format_decimal( $subscription['subscription']['amount']/100, wc_get_price_decimals() ));
+                $newOrder->set_shipping_total(0);
+
+                $newOrder->add_order_note(__('New order created by subscription.', 'payxpert'));
+
+                if ($is_success) {
+                    // Payment OK
+                    $newOrder->payment_complete($subscriptionTransaction['transactionID']);
+                } else {
+                    // Payment KO
+                    $newOrder->update_status(
+                        'failed',
+                        __('Payment failed on subscription renewal.', 'payxpert')
+                    );
+                }
+
+                WC_Payxpert_Logger::info('New order created [originalOrderID: ' . $originalOrder->get_id() . ', newOrderID: ' . $newOrder->get_id() . ']');
+
+                $orderId = $newOrder->get_id();
+            } else {
+                $orderId = $firstTransaction['order_id'];
+            }
+
+            // Persist transaction row for this order.
+            $createTransaction($firstTransaction, $subscriptionTransaction, $orderId);
+            WC_Payxpert_Logger::info('Create transaction [transactionID : ' . $subscriptionTransaction['transactionID'] . ']');
+            $updated = true;
+        }
+
+        // Update local subscription row from API payload.
+        $payxpertSubscriptionArray = Payxpert_Subscription::findBySubscriptionId((string)$firstTransaction['subscription_id']);
+        $subscriptionInfo = self::to_snake_case_keys($subscription['subscription']);
+        $payxpertSubscription = Payxpert_Subscription::get_instance_from_array($payxpertSubscriptionArray);
+        $payxpertSubscription->set($subscriptionInfo);
+        $payxpertSubscription->save();
+
+        // TODO : maybe status 'finished' is better
+        if ($updated && $subscriptionType == 'partpayment' && ($subscriptionInfo['iterations_left'] ?? 0) == 0) {
+            $order = wc_get_order($firstTransaction['order_id']);
+            if ($order) {
+                $new_status = $order->needs_processing() ? 'processing' : 'completed';
+                $order->update_status($new_status, __('Status updated after payment captured via PayXpert.', 'payxpert'));
             }
         }
 
-        if ($updated) {
-            $payxpertSubscriptionArray = Payxpert_Subscription::findBySubscriptionId((string) $firstTransaction['subscription_id']);
-            
-            $subscriptionInfo = self::to_snake_case_keys($subscription['subscription']);
-            $payxpertSubscription = Payxpert_Subscription::get_instance_from_array($payxpertSubscriptionArray);
-            $payxpertSubscription->set($subscriptionInfo);
-            WC_Payxpert_Logger::info('Update subscription [subcriptionID : ' . $firstTransaction['subscription_id'] . ']');
-            $payxpertSubscription->save();
-            
-            // Update orderState to paid when all iterations have been done
-            if ($subscriptionInfo['iterations_left'] == 0) {
-                $order = wc_get_order($firstTransaction['order_id']);
-                $new_status = $order->needs_processing() ? 'processing' : 'completed';
-                    $order->update_status($new_status, __('Status updated after payment captured via PayXpert.', 'payxpert'));
-                }
-        }
-
-        return $updated;
+        return true;
     }
+
 
     public static function is_installment_payment_available($configuration, $amount)
     {
@@ -321,7 +473,6 @@ class WC_Payxpert_Utils
 
         return false;
     }
-
 
     public static function get_period_by_frequency($frequency)
     {
@@ -409,13 +560,13 @@ class WC_Payxpert_Utils
         );
     }
 
-        /**
-     * Retourne le nom du fichier de l’icône PayXpert selon la configuration et la gateway
+    /**
+     * Returns the PayXpert gateway icon file name for the given configuration.
      *
-     * @param array  $configuration Configuration de la gateway
-     * @param string $gateway_id    ID de la gateway
+     * @param array  $configuration Gateway settings.
+     * @param string $gateway_id    Gateway ID.
      *
-     * @return string|null Nom du fichier (ex: cc.png)
+     * @return string|null Public URL to the icon asset.
      */
     public static function get_gateway_icon_name(array $configuration, string $gateway_id)
     {
@@ -435,7 +586,7 @@ class WC_Payxpert_Utils
                     ? $configuration['payxpert_applepay_enabled'] === 'yes' 
                     : false;
 
-        $icon = 'cc'; // défaut
+        $icon = 'cc'; // default
 
         if (!$hasAmex && !$hasApplePay) {
             $icon = 'cc-no-amex-no-applepay';

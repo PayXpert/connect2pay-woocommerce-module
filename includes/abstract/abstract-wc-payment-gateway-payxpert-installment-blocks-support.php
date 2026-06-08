@@ -9,29 +9,33 @@ defined('ABSPATH') || exit;
 abstract class WC_Payment_Gateway_Payxpert_Installment_Blocks_Support extends AbstractPaymentMethodType {
     protected $gateway;
     protected $name;
-
+    
     public function initialize() {
         $this->settings = get_option("woocommerce_{$this->name}_settings", array());
         $gateways = WC()->payment_gateways->payment_gateways();
         $this->gateway = $gateways[$this->name] ?? null;
     }
-
+    
     public function is_active() {
         return $this->gateway && $this->gateway->is_available();
     }
-
+    
     public function get_payment_method_script_handles() {
         $script_name = $this->name;
         $plugin_dir = dirname(__DIR__, 2);
-
+        
         $script_asset_path = $plugin_dir . '/assets/js/build/blocks/' . $script_name . '.asset.php';
-
+        
         $script_asset = file_exists($script_asset_path)
-            ? require $script_asset_path
-            : ['dependencies' => [], 'version' => '1.0.0'];
+        ? require $script_asset_path
+        : ['dependencies' => [], 'version' => '1.0.0'];
 
+        if ($this->gateway->seamless && !in_array('payxpert-seamless', $script_asset['dependencies'], true)) {
+            $script_asset['dependencies'][] = 'payxpert-seamless';
+        }
+        
         $script_url = plugin_dir_url($plugin_dir . '/payxpert.php') . 'assets/js/build/blocks/' . $script_name . '.js';
-
+        
         wp_register_script(
             'wc-' . $this->name . '-blocks-integration',
             $script_url,
@@ -39,33 +43,43 @@ abstract class WC_Payment_Gateway_Payxpert_Installment_Blocks_Support extends Ab
             $script_asset['version'],
             true
         );
-
+        
         return ['wc-' . $this->name . '-blocks-integration'];
     }
-
+    
     public function get_payment_method_data() {
-        $description = $this->gateway->get_payment_fields();
         $seamlessData = null;
-
+        $description = '';
+        
         if ($this->gateway->seamless) {
             global $wp;
             $order = null;
-
+            
             if (isset($wp->query_vars['order-pay'])) {
                 $order_id = absint($wp->query_vars['order-pay']);
                 $order = wc_get_order($order_id);
             }
-
+            
             $seamlessData = $this->gateway->get_seamless_data($order);
-            if (isset($seamlessData['error'])) {
-                $description = $seamlessData['error'];
+            if (is_null($seamlessData)) {
+                $description = '';
+            } elseif (isset($seamlessData['error'])) {
+                $description = is_string($seamlessData['error']) ? esc_html($seamlessData['error']) : '';
+            } else {
+                $schedule_html = method_exists($this->gateway, 'get_installment_schedule_html')
+                ? $this->gateway->get_installment_schedule_html()
+                : '';
+                $extra = 'style="width:100%"';
+                $description = $schedule_html . $this->gateway->get_seamless_payment_fields_html($seamlessData, $extra);
             }
+        } else {
+            $description = $this->gateway->get_payment_fields();
         }
-
+        
         $plugin_dir = dirname(__DIR__, 2);
         $paymentMethodLogoPath = plugin_dir_url($plugin_dir . '/payxpert.php') . 'assets/img/payment_method_logo';
         $icons = WC_Payxpert_Utils::get_gateway_block_icons($this->gateway->configuration);
-  
+        
         return array(
             'title'       => $this->get_setting('title', $this->gateway->title),
             'description' => $description,

@@ -23,23 +23,23 @@ jQuery(document).ready(function($){
                         return;
                     }
 
-                    // Récupérer les valeurs
+                    // Collect form values.
                     var data = {
                         action: "payxpert_send_support_email",
                         firstname: $("#support_firstname").val(),
                         lastname: $("#support_lastname").val(),
                         email: $("#support_email").val(),
                         subject: $("#support_subject").val(),
-                        _ajax_nonce: payxpert_support.nonce // nonce pour sécuriser
+                        _ajax_nonce: payxpert_support.nonce // nonce for AJAX
                     };
 
-                    // Désactiver le bouton
+                    // Disable submit while waiting.
                     $(".ui-dialog-buttonpane button:contains('Envoyer')").prop("disabled", true);
 
-                    // Afficher un loading
+                    // Show loading state.
                     $(".payxpert-support-response").html('<span class="payxpert-spinner"></span>');
 
-                    // Appel Ajax
+                    // POST to admin-ajax.
                     $.post(payxpert_support.ajax_url, data, function(response){
                         if(response.success){
                             $(".payxpert-support-response").html("<div class='payxpert-notice notice notice-success'><p>"+response.data+"</p></div>");
@@ -62,7 +62,7 @@ jQuery(document).ready(function($){
         ]
     });
 
-    // Ouvre le dialog au clic
+    // Open dialog on button click.
     $("#open-payxpert-support").on("click", function(e){
         e.preventDefault();
         $("#payxpert-support-dialog").dialog("open");
@@ -92,10 +92,10 @@ jQuery(document).ready(function($){
     function toggleInstalmentFields() {
         var anyActive = false;
 
-        // Cacher tous les fieldsets
+        // Hide all instalment fieldsets.
         $('fieldset[id^="payxpert_installment_x"]').hide();
 
-        // Parcourir tous les checkboxes d'activation
+        // Show fieldset for each enabled instalment plan.
         $('input[type="checkbox"][id^="payxpert_installment_x"][id$="_enabled"]').each(function () {
             var checkbox = $(this);
             var idMatch = checkbox.attr('id').match(/^payxpert_installment_x(\d+)_enabled$/);
@@ -106,7 +106,7 @@ jQuery(document).ready(function($){
             }
         });
 
-        // Afficher/masquer le bloc complet de réglages instalment
+        // Toggle whole instalment settings block.
         $('#installment_settings').toggle(anyActive);
     }
 
@@ -115,7 +115,7 @@ jQuery(document).ready(function($){
         $('input[type="checkbox"][id^="payxpert_installment_x"][id$="_enabled"]').on('change', toggleInstalmentFields);
     }
 
-    // === INITIALISATION GLOBALE ===
+    // === Page init ===
     initCaptureMode();
     initInstalments();
 });

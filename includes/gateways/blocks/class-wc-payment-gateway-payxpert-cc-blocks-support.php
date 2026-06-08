@@ -1,32 +1,31 @@
 <?php
 
 use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
-use Payxpert\Models\Payxpert_Payment_Transaction;
 use Payxpert\Utils\WC_Payxpert_Utils;
 
 defined('ABSPATH') || exit;
 
 final class WC_Payment_Gateway_Payxpert_CC_Blocks_Support extends AbstractPaymentMethodType {
-    private $gateway;
+	private $gateway;
 	
 	protected $name = 'payxpert_cc';
-
+	
 	public function initialize() {
 		$this->settings = get_option( "woocommerce_{$this->name}_settings", array() );
 		$gateways = WC()->payment_gateways->payment_gateways();
 		$this->gateway  = $gateways[ $this->name ];
 	}
-
+	
 	public function is_active() {
 		return $this->gateway->is_available();
 	}
-
+	
 	public function get_payment_method_script_handles() {
-        $script_name = $this->name;
+		$script_name = $this->name;
 		$plugin_dir  = dirname(__DIR__, 3);
-
+		
 		$script_asset_path = $plugin_dir . '/assets/js/build/blocks/' . $script_name . '.asset.php';
-
+		
 		if ( file_exists( $script_asset_path ) ) {
 			$script_asset = require $script_asset_path;
 		} else {
@@ -36,8 +35,12 @@ final class WC_Payment_Gateway_Payxpert_CC_Blocks_Support extends AbstractPaymen
 			];
 		}
 
+		if ( $this->gateway->seamless && ! in_array( 'payxpert-seamless', $script_asset['dependencies'], true ) ) {
+			$script_asset['dependencies'][] = 'payxpert-seamless';
+		}
+		
 		$script_url = plugin_dir_url( $plugin_dir . '/payxpert.php' ) . 'assets/js/build/blocks/' . $script_name . '.js';
-
+		
 		wp_register_script(
 			'wc-payxpert-cc-blocks-integration',
 			$script_url,
@@ -45,29 +48,35 @@ final class WC_Payment_Gateway_Payxpert_CC_Blocks_Support extends AbstractPaymen
 			$script_asset['version'],
 			true
 		);
-
+		
 		return [ 'wc-payxpert-cc-blocks-integration' ];
 	}
-
+	
 	public function get_payment_method_data() {
-		$description = $this->gateway->get_payment_fields();
-
+		$seamlessData = null;
+		$description = '';
+		
 		if ($this->gateway->seamless) {
 			global $wp;
 			$order = null;
-
-			// Order-Pay special case
+			
 			if ( isset( $wp->query_vars['order-pay'] ) ) {
 				$order_id = absint( $wp->query_vars['order-pay'] );
 				$order = wc_get_order( $order_id );
 			}
-
+			
 			$seamlessData = $this->gateway->get_seamless_data($order);
-			if (isset($seamlessData['error'])) {
-				$description = $seamlessData['error'];
-			} 
+			if (is_null($seamlessData)) {
+				$description = '';
+			} elseif (isset($seamlessData['error'])) {
+				$description = is_string($seamlessData['error']) ? esc_html($seamlessData['error']) : '';
+			} else {
+				$description = $this->gateway->get_seamless_payment_fields_html($seamlessData);
+			}
+		} else {
+			$description = $this->gateway->get_payment_fields();
 		}
-
+		
 		// Icon conditions
 		$plugin_dir = dirname(__DIR__, 3);
 		$paymentMethodLogoPath = plugin_dir_url( $plugin_dir . '/payxpert.php' ) . 'assets/img/payment_method_logo';

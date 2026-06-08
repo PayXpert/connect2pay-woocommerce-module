@@ -78,7 +78,7 @@ class WC_Payxpert_Settings {
             <img data-target="https://www.payxpert.fr/contactez-nous/" width="100%" src="<?php echo WC_PAYXPERT_ASSETS . 'img/banners/PayXpertBanner.jpg'; ?>" alt="PayXpert banner">
             
             <div class="top-links">
-                <a class="button-primary" href="<?php echo esc_url( admin_url( 'admin-post.php?action=payxpert_download_logs' ) ); ?>">
+                <a class="button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=payxpert_download_logs' ), 'payxpert_download_logs' ) ); ?>">
                     <?php echo __('Download LOGs','payxpert'); ?>
                 </a>
                 <button id="open-payxpert-support" class="button-secondary"><?php echo __('CONTACT US', 'payxpert'); ?></button>
@@ -150,11 +150,24 @@ class WC_Payxpert_Settings {
                             value="<?php echo get_option('payxpert_originator_id'); ?>" required />
                     </div>
                     <div class="form-group">
-                        <label for="password">
+                        <label for="payxpert_password">
                             <?php echo __('Private API Key', 'payxpert'); ?>
                         </label>
-                        <input type="password" id="payxpert_password" name="payxpert_password"
-                            value="<?php echo stripslashes(get_option('payxpert_password')); ?>" required />
+                        <?php
+                        $has_private_key = (string) get_option('payxpert_password') !== '';
+                        ?>
+                        <input
+                            type="password"
+                            id="payxpert_password"
+                            name="payxpert_password"
+                            value=""
+                            autocomplete="new-password"
+                            placeholder="<?php echo esc_attr($has_private_key ? '********' : ''); ?>"
+                            <?php echo $has_private_key ? '' : ' required'; ?>
+                        />
+                        <?php if ($has_private_key) : ?>
+                            <p class="description"><?php esc_html_e('Leave blank to keep the current private key.', 'payxpert'); ?></p>
+                        <?php endif; ?>
                     </div>
 
                     <button type="submit" class="button-primary">
@@ -271,7 +284,7 @@ class WC_Payxpert_Settings {
         <?php
 
         /* Support dialog */
-        include WC_PAYXPERT_PLUGIN_FILE_PATH . 'templates/views/html-settings-support-dialog.php';
+        include WC_PAYXPERT_PLUGIN_FILE_PATH . 'templates/views/html-admin-settings-support-dialog.php';
     }
 
     public static function get_settings()
@@ -375,9 +388,13 @@ class WC_Payxpert_Settings {
                         'default' => 'no',
                         'description' => __('This payment method is not available yet in display mode: IFrame.', 'payxpert'),
                     ],
+                    'payxpert_subscription_enabled' => [
+                        'type'    => 'checkbox',
+                        'label'   => __('Subscription', 'payxpert'),
+                        'default' => 'no',
+                    ]
                 ],
             ],
-
             'payment_method_labels' => [
                 'title'       => __('Customization', 'payxpert'),
                 'description' => '',
@@ -386,6 +403,11 @@ class WC_Payxpert_Settings {
                         'type'    => 'text',
                         'label'   => __('Payment label: Credit Card', 'payxpert'),
                         'default' => __('Payment via Credit Card by PayXpert', 'payxpert'),
+                    ],
+                    'payxpert_subscription_label' => [
+                        'type'    => 'text',
+                        'label'   => __('Payment label: Subscription', 'payxpert'),
+                        'default' => __('Paiement par Abonnement via Carte de crédit par PayXpert', 'payxpert'),
                     ],
                     // #44959 : Prochain lot
                     // 'payxpert_alipay_label' => [
@@ -547,7 +569,6 @@ class WC_Payxpert_Settings {
                 ],
             ],
 
-
         ];
     }
 
@@ -556,7 +577,7 @@ class WC_Payxpert_Settings {
 
         $this->check_save_rights();
 
-        $section = $_POST['section'];
+        $section = isset( $_POST['section'] ) ? sanitize_key( wp_unslash( $_POST['section'] ) ) : '';
         
         switch ($section) {
             case 'credentials':
@@ -575,12 +596,19 @@ class WC_Payxpert_Settings {
 
     private function save_credentials()
     {
-		$options_to_save = [
-			'payxpert_originator_id',
-			'payxpert_password'
-		];
+        if (isset($_POST['payxpert_originator_id'])) {
+            update_option(
+                'payxpert_originator_id',
+                stripslashes(trim(sanitize_text_field(wp_unslash($_POST['payxpert_originator_id']))))
+            );
+        }
 
-		$this->save_payxpert_options($options_to_save);
+        $new_private_key = isset($_POST['payxpert_password'])
+            ? trim(sanitize_text_field(wp_unslash($_POST['payxpert_password'])))
+            : '';
+        if ($new_private_key !== '') {
+            update_option('payxpert_password', stripslashes($new_private_key));
+        }
 
         $configuration = WC_Payxpert_Utils::get_configuration();
         $account = WC_Payxpert_Webservice::getAccountInfo(
@@ -681,9 +709,11 @@ class WC_Payxpert_Settings {
     }
 
     public function payxpert_handle_logs_download() {
-        if ( ! current_user_can('manage_options') ) {
+        if ( ! current_user_can('manage_woocommerce') ) {
             wp_die(__('Unauthorized', 'payxpert'));
         }
+
+        check_admin_referer('payxpert_download_logs');
 
         $logFile = WC_Payxpert_Logger::getLogFilePath();
         if (!file_exists($logFile)) {

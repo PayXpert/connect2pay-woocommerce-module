@@ -5,6 +5,7 @@ namespace Payxpert\Utils;
 defined( 'ABSPATH' ) || exit();
 
 use Payxpert\Models\Payxpert_Cron_Log;
+use Payxpert\Models\Payxpert_Payment_Token;
 use Payxpert\Models\Payxpert_Payment_Transaction;
 use Payxpert\Models\Payxpert_Subscription;
 use Payxpert\Utils\WC_Payxpert_Utils;
@@ -32,80 +33,103 @@ class WC_Payxpert_Cron {
     private $cronType;
 
     public static function install() {
-        if (!wp_next_scheduled('payxpert_sync_installment_transactions_cron')) {
-            wp_schedule_event(time(), 'hourly', 'payxpert_sync_installment_transactions_cron');
+        if (!wp_next_scheduled('payxpert_sync_subscriptions_cron')) {
+            wp_schedule_event(time(), 'hourly', 'payxpert_sync_subscriptions_cron');
+        }
+        if (!wp_next_scheduled('payxpert_cleanup_payment_tokens_cron')) {
+            wp_schedule_event(time(), 'daily', 'payxpert_cleanup_payment_tokens_cron');
         }
     }
 
     public static function deactivate() {
-        wp_clear_scheduled_hook('payxpert_sync_installment_transactions_cron');
+        wp_clear_scheduled_hook('payxpert_sync_subscriptions_cron');
+        wp_clear_scheduled_hook('payxpert_cleanup_payment_tokens_cron');
     }
 
     /**
-     * DEV
+     * Scheduled by WordPress cron via {@see wp_schedule_event()}.
      */
-    public static function manual_trigger() {
-        add_action('admin_init', function () {
-            if (isset($_GET['payxpert_cron_test']) && current_user_can('manage_woocommerce')) {
-                self::sync_installment_transactions_cron();
-                wp_die('Payxpert cron exécuté.');
-            }
-        });
-    }
-
-    /**
-     * Hook appelé automatiquement via le cron WordPress : wp_schedule_event
-     */
-    public function sync_installment_transactions_cron() {
+    public function sync_subscriptions_cron() {
         WC_Payxpert_Logger::debug('start');
 
         $this->start = microtime(true);
         $this->cronType = Payxpert_Cron_Log::CRON_TYPE_INSTALLMENT;
 
-        $installments = Payxpert_Subscription::get_need_synchronization();
+        $subscriptions = Payxpert_Subscription::get_need_synchronization();
         $cfg = WC_Payxpert_Utils::get_configuration();
+        $count = count($subscriptions);
 
-        $count = count($installments);
         if ($count === 0) {
-            $this->writeln('All installment are already synchronized.', self::TYPE_INFO);
+            $this->writeln('All subscriptions are already synchronized.', self::TYPE_INFO);
             return $this->finalize();
         }
+        $this->writeln("Beginning synchronization of {$count} subscription(s)", self::TYPE_INFO);
 
-        $this->writeln("Beginning synchronization of {$count} installment(s)", self::TYPE_INFO);
-
-        foreach ($installments as $inst) {
+        foreach ($subscriptions as $sub) {
             try {
-                $tx = Payxpert_Payment_Transaction::findByTransactionId((string) $inst['transaction_id']);
+                $tx = Payxpert_Payment_Transaction::findByTransactionId((string) $sub['transaction_id']);
                 if (!$tx) {
                     $this->writeln(
-                        "No initial transaction found for [installmentID={$inst['id_payxpert_subscription']}]", 
+                        "No initial transaction found for [transactionID={$sub['transaction_id']}]", 
                         self::TYPE_ERROR
                     );
                     continue;
                 }
 
-                $info = WC_Payxpert_Webservice::get_status_subscription($cfg, $inst['subscription_id']);
+                $info = WC_Payxpert_Webservice::get_status_subscription($cfg, $sub['subscription_id']);
 
-                if (WC_Payxpert_Utils::sync_subscription($info, $tx)) {
+                if (isset($info['error'])) {
                     $this->writeln(
-                        "Subcription {$inst['subscription_id']} updated",
+                        "Subscription API error [subscriptionID={$sub['subscription_id']}]: {$info['error']}",
+                        self::TYPE_ERROR
+                    );
+                    continue;
+                }
+
+                if (WC_Payxpert_Utils::sync_subscription($cfg, $info, $tx)) {
+                    $this->writeln(
+                        "Subcription {$sub['subscription_id']} updated",
                         self::TYPE_INFO
                     );
                 } else {
                     $this->writeln(
-                        "Subcription {$inst['subscription_id']} NOT updated (weirdly)",
+                        "Subcription {$sub['subscription_id']} NOT updated (weirdly)",
                         self::TYPE_INFO
                     );
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $this->writeln(
-                    "Critical error for [ID={$inst['id_payxpert_subscription']}] : ".$e->getMessage(),
+                    "Critical error for [ID={$sub['id_payxpert_subscription']}] : ".$e->getMessage(),
                     self::TYPE_ERROR
                 );
             }
         }
 
         return $this->finalize();
+    }
+
+    /**
+     * Cleans preparePayment tokens with no order (order_id = 0) based on age rules.
+     */
+    public function cleanup_payment_tokens_cron(): void {
+        WC_Payxpert_Logger::debug('payxpert_cleanup_payment_tokens_cron start');
+
+        $this->start = microtime(true);
+        $this->cronType = Payxpert_Cron_Log::CRON_TYPE_TOKEN_CLEANUP;
+        $this->hasError = false;
+        $this->outputBuffer = [];
+
+        try {
+            $deleted = Payxpert_Payment_Token::delete_expired_orphan_tokens();
+            $this->writeln(
+                sprintf('Deleted %d orphan payment token row(s) (order_id=0, age rules applied).', $deleted),
+                self::TYPE_INFO
+            );
+        } catch (\Throwable $e) {
+            $this->writeln('Token cleanup failed: ' . $e->getMessage(), self::TYPE_ERROR);
+        }
+
+        $this->finalize();
     }
 
     private function writeln(string $msg, string $type)
@@ -117,7 +141,7 @@ class WC_Payxpert_Cron {
     }
 
     /**
-     * Enregistre le log et retourne le résultat
+     * Persists the log entry and returns the result.
      *
      * @return array{status:int,messages:array,duration:float}
      */

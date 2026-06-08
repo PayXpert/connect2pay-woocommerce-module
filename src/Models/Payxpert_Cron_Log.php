@@ -9,6 +9,7 @@ class Payxpert_Cron_Log extends Payxpert_Abstract_Model {
 
     const CRON_TYPE_INSTALLMENT = 0;
     const CRON_TYPE_REMINDER = 1;
+    const CRON_TYPE_TOKEN_CLEANUP = 2;
 
     CONST STATUS_SUCCESS = 0;
     CONST STATUS_ERROR = 1;

@@ -8,6 +8,7 @@ module.exports = {
     payxpert_installment_x2: path.resolve(__dirname, 'assets/js/src/blocks/payxpert_installment_x2.js'),
     payxpert_installment_x3: path.resolve(__dirname, 'assets/js/src/blocks/payxpert_installment_x3.js'),
     payxpert_installment_x4: path.resolve(__dirname, 'assets/js/src/blocks/payxpert_installment_x4.js'),
+    payxpert_subscription: path.resolve(__dirname, 'assets/js/src/blocks/payxpert_subscription.js'),
   },
   output: {
     path: path.resolve(__dirname, 'assets/js/build/blocks'),

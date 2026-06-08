@@ -1,4 +1,7 @@
 <?php
+
+use Payxpert\Utils\WC_Payxpert_Logger;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -6,50 +9,50 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class WC_Email_Payxpert_Paybylink
  *
- * Envoie un e-mail contenant le lien de paiement PayByLink au client.
+ * Sends the PayByLink payment URL to the customer by email.
  */
 class WC_Email_Payxpert_Paybylink extends WC_Email {
-
+	
 	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		$this->id             = 'payxpert_paybylink';
 		$this->title          = 'PayXpert - PayByLink';
-		$this->description    = 'Email envoyé à un client contenant un lien de paiement PayByLink pour sa commande WooCommerce.';
+		$this->description    = __( 'Email sent to a customer with a payment link', 'payxpert' );
 		$this->customer_email = true;
-
-		$this->heading = 'Complétez votre commande';
-		$this->subject = 'Paiement en attente pour votre commande sur {site_title}';
-
+		
+		$this->heading = __( 'Complete your order', 'payxpert' );
+		$this->subject = __( 'Pending payment for your order on {site_title}', 'payxpert' );
+		
 		$this->template_html  = 'email-paybylink.php';
 		$this->template_plain = 'plain/email-paybylink.php';
-
-		$this->recipient = ''; // Ce sera défini dynamiquement avec trigger()
-
+		
+		$this->recipient = ''; // Set in trigger() from $data.
+		
 		parent::__construct();
 	}
-
+	
 	/**
-	 * Déclenche l’envoi de l’e-mail.
+	 * Sends the email.
 	 *
-	 * @param array $data Données à injecter dans le template.
+	 * @param array $data Template variables.
 	 */
 	public function trigger( $data ) {
 		if ( empty( $data['recipient'] ) || empty( $data['order'] ) || empty( $data['payment_link'] ) ) {
 			return;
 		}
-
+		
 		$this->recipient = $data['recipient'];
 		$this->data      = $data;
-
+		
 		$this->object = $data['order'];
-
+		
 		if ( ! $this->is_enabled() || ! $this->get_recipient() ) {
 			return;
 		}
-
-		$this->send(
+		
+		return $this->send(
 			$this->get_recipient(),
 			$this->get_subject(),
 			$this->get_content(),
@@ -57,7 +60,7 @@ class WC_Email_Payxpert_Paybylink extends WC_Email {
 			$this->get_attachments()
 		);
 	}
-
+	
 	/**
 	 * Contenu HTML.
 	 */
@@ -71,7 +74,7 @@ class WC_Email_Payxpert_Paybylink extends WC_Email {
 		);
 		return ob_get_clean();
 	}
-
+	
 	/**
 	 * Contenu texte brut (si besoin).
 	 */

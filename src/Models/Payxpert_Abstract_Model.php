@@ -6,13 +6,15 @@ defined('ABSPATH') || exit;
 
 abstract class Payxpert_Abstract_Model {
     /**
-     * Le nom de la table, défini par les classes filles.
+     * Table name, defined by child classes.
+     *
      * @var string
      */
     protected $table;
 
     /**
-     * Les données à insérer ou mettre à jour.
+     * Data to insert or update.
+     *
      * @var array
      */
     protected $data = [];
@@ -22,7 +24,7 @@ abstract class Payxpert_Abstract_Model {
     protected $fillable = [];
 
     /**
-     * Définit les données à enregistrer.
+     * Sets the data to persist.
      */
     public function set(array $data): void {
         $filtered = array_intersect_key($data, array_flip($this->fillable ?? []));
@@ -30,14 +32,14 @@ abstract class Payxpert_Abstract_Model {
     }
 
     /**
-     * Retourne les données actuellement définies.
+     * Returns the current data bag.
      */
     public function get(): array {
         return $this->data;
     }
 
     /**
-     * Insère les données en base.
+     * Inserts or updates rows in the database.
      */
     public function save(): bool {
         global $wpdb;
@@ -56,15 +58,33 @@ abstract class Payxpert_Abstract_Model {
         }
     }
 
+    /**
+     * @return string[]
+     */
+    protected static function get_allowed_condition_columns(): array {
+        $instance = new static();
+
+        return array_merge($instance->fillable ?? [], array_filter([$instance->primary_key]));
+    }
+
     public static function findBy(array $conditions): array {
         global $wpdb;
         $instance = new static();
 
+        $allowed = array_flip(static::get_allowed_condition_columns());
+
         $where = [];
         $values = [];
         foreach ($conditions as $key => $value) {
+            if (!isset($allowed[$key])) {
+                continue;
+            }
             $where[] = "{$key} = %s";
             $values[] = $value;
+        }
+
+        if ($where === []) {
+            return [];
         }
 
         $sql = "SELECT * FROM {$instance->table} WHERE " . implode(' AND ', $where);
@@ -82,11 +102,20 @@ abstract class Payxpert_Abstract_Model {
         global $wpdb;
         $instance = new static();
 
+        $allowed = array_flip(static::get_allowed_condition_columns());
+
         $where = [];
         $values = [];
         foreach ($conditions as $key => $value) {
+            if (!isset($allowed[$key])) {
+                continue;
+            }
             $where[] = "{$key} = %s";
             $values[] = $value;
+        }
+
+        if ($where === []) {
+            return false;
         }
 
         $sql = "DELETE FROM {$instance->table} WHERE " . implode(' AND ', $where);

@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Template Email PayByLink - HTML version
  */
 
-// Récupération du logo si défini
+// Custom logo from theme or WooCommerce email settings.
 $logo_id = get_option( 'woocommerce_email_header_image' );
 $logo_url = $logo_id ? wp_get_attachment_url( $logo_id ) : '';
 

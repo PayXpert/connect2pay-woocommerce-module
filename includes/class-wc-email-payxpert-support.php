@@ -6,50 +6,50 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class WC_Email_Payxpert_Support
  *
- * Un email personnalisé WooCommerce.
+ * WooCommerce email: PayXpert support form submission.
  */
 class WC_Email_Payxpert_Support extends WC_Email {
-
+	
 	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		$this->id             = 'payxpert_support';
 		$this->title          = 'PayXpert Support';
-		$this->description    = 'Email envoyé lorsqu\'un utilisateur soumet le formulaire de support PayXpert.';
+		$this->description    = __( 'Email sent when a user submits the PayXpert support form.', 'payxpert' );
 		$this->customer_email = false;
-
-		// Sujet et titre par défaut
-		$this->heading = 'Demande de support PayXpert';
-		$this->subject = 'Demande de support PayXpert';
-
-		// Les templates
+		
+		// Default heading and subject.
+		$this->heading = __( 'PayXpert Support Request', 'payxpert' );
+		$this->subject = __( 'PayXpert Support Request', 'payxpert' );
+		
+		// Template paths.
 		$this->template_html  = 'email-support.php';
 		$this->template_plain = 'plain/email-support.php';
-
-		// Destinataire par défaut
+		
+		// Default recipient (overridden in trigger()).
 		$this->recipient = get_option( 'admin_email' );
-
+		
 		parent::__construct();
 	}
-
+	
 	/**
-	 * Déclenche l'envoi de l'email.
+	 * Sends the email.
 	 */
 	public function trigger( $data ) {
-
-		// Tu peux personnaliser ici à qui envoyer :
+		
+		// Optional recipient override from $data.
 		if ( ! empty( $data['recipient'] ) ) {
 			$this->recipient = $data['recipient'];
 		}
-
+		
 		$this->data = $data;
-
+		
 		if ( ! $this->is_enabled() || ! $this->get_recipient() ) {
 			return;
 		}
-
-		$this->send(
+		
+		return $this->send(
 			$this->get_recipient(),
 			$this->get_subject(),
 			$this->get_content(),
@@ -57,9 +57,9 @@ class WC_Email_Payxpert_Support extends WC_Email {
 			$this->get_attachments()
 		);
 	}
-
+	
 	/**
-	 * Remplace le contenu HTML de l'email.
+	 * Builds the HTML body.
 	 */
 	public function get_content_html() {
 		ob_start();
@@ -71,9 +71,9 @@ class WC_Email_Payxpert_Support extends WC_Email {
 		);
 		return ob_get_clean();
 	}
-
+	
 	/**
-	 * Si tu veux aussi un format texte simple.
+	 * Plain-text body (optional template).
 	 */
 	public function get_content_plain() {
 		ob_start();
@@ -85,5 +85,5 @@ class WC_Email_Payxpert_Support extends WC_Email {
 		);
 		return ob_get_clean();
 	}
-
+	
 }

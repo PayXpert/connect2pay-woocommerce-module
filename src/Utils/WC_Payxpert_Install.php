@@ -20,7 +20,7 @@ class WC_Payxpert_Install {
                 transaction_id VARCHAR(128) NOT NULL,
                 transaction_referal_id VARCHAR(128),
                 order_id INT UNSIGNED NOT NULL,
-                payment_id VARCHAR(50) NOT NULL,
+                payment_id VARCHAR(50) DEFAULT NULL,
                 liability_shift BOOLEAN DEFAULT FALSE,
                 payment_method VARCHAR(50) NOT NULL,
                 operation VARCHAR(50) NOT NULL,
@@ -28,6 +28,8 @@ class WC_Payxpert_Install {
                 currency VARCHAR(3) NOT NULL,
                 result_code VARCHAR(10) NOT NULL,
                 result_message TEXT NOT NULL,
+                card_number VARCHAR(32) DEFAULT NULL,
+                card_brand VARCHAR(32) DEFAULT NULL,
                 date_add DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 order_slip_id INT DEFAULT NULL,
                 subscription_id INT DEFAULT NULL,
@@ -108,9 +110,102 @@ class WC_Payxpert_Install {
         }
 
         flush_rewrite_rules();
+        WC_Payxpert_Utils::ensure_ipn_secret();
+        update_option('wc_payxpert_plugin_version', WC_PAYXPERT_VERSION);
+    }
+
+    // This function is used only to set dynamic translation
+    // No need to call it.
+    public static function dynamic_translations()
+    {
+        // Subscription status
+        __('finished', 'payxpert');
+        __('disabled', 'payxpert');
+        __('active', 'payxpert');
+
+        // Transaction status 
+        __('success', 'payxpert');
+        __('failure', 'payxpert');
+
+        // Cancel reasons
+        __('Didn’t like the site', 'payxpert');
+        __('Disagree (‘did not do it’ or ‘do not recognize the transaction’)', 'payxpert');
+        __('I could not get in to the site', 'payxpert');
+        __('No problem, just moving on', 'payxpert');
+        __('Not enough updates', 'payxpert');
+        __('Problems with the movies/videos', 'payxpert');
+        __('Site was too slow', 'payxpert');
+        __('The site did not work', 'payxpert');
+        __('Too expensive', 'payxpert');
+        __('Un-authorized signup by family member', 'payxpert');
+        __('Webmaster requested to cancel', 'payxpert');
+        __('I haven’t received my item', 'payxpert');
+        __('The item was damaged or defective', 'payxpert');
+        __('The box was empty', 'payxpert');
+        __('The order was incomplete', 'payxpert');
+        __('Bank denial', 'payxpert');
+        __('Canceled due to refund', 'payxpert');
+        __('Canceled due to retrieval request', 'payxpert');
+        __('Cancellation letter sent by bank', 'payxpert');
+        __('Chargeback', 'payxpert');
+        __('Company account closed', 'payxpert');
+        __('Site account closed', 'payxpert');
+        __('Fraud from webmaster', 'payxpert');
+        __('Undetermined reasons', 'payxpert');
+        __('Unknown reason', 'payxpert');
+
+        // Subscription type
+        __('infinite', 'payxpert');
+
+        // Subscription status
+        __('actif', 'payxpert');
+        __('canceled', 'payxpert');
+
+        // Subscription frequency
+        __('daily', 'payxpert');
+        __('weekly', 'payxpert');
+        __('monthly', 'payxpert');
+        __('quarterly', 'payxpert');
+        __('yearly', 'payxpert');
+
     }
 
     public static function deactivate() {
 		WC_Payxpert_Logger::debug('deactivate');
+    }
+
+    public static function upgrade_db() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'payxpert_payment_transaction';
+
+        // payment_id DEFAULT NULL (due to no payment_id in refund transaction on otherApi)
+        $column = $wpdb->get_row($wpdb->prepare(
+            "SHOW COLUMNS FROM `$table` LIKE %s",
+            'payment_id'
+        ));
+
+        if ($column && $column->Null === 'NO') {
+            $wpdb->query("
+                ALTER TABLE `$table`
+                MODIFY COLUMN `payment_id` VARCHAR(50) DEFAULT NULL
+            ");
+        }
+    }
+
+    public static function cleanup_legacy_logs(): void
+    {
+        $log_dir = dirname(WC_Payxpert_Logger::getLogFilePath());
+        $pattern = trailingslashit($log_dir) . '*.log';
+        $log_files = glob($pattern);
+
+        if (!is_array($log_files)) {
+            return;
+        }
+
+        foreach ($log_files as $log_file) {
+            if (is_file($log_file)) {
+                @unlink($log_file);
+            }
+        }
     }
 }

@@ -9,11 +9,11 @@
         </div>
     </div>
 
-    <div class="block">
+    <div class="block" style="overflow: auto;">
         <?php if (empty($transactions)): ?>
             <p><?php _e('No transactions found.', 'payxpert'); ?></p>
         <?php else: ?>
-            <table class="widefat fixed striped">
+            <table class="widefat striped">
                 <thead>
                     <tr>
                         <th><?php _e('ID', 'payxpert'); ?></th>

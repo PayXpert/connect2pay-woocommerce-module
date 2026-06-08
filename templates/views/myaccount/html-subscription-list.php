@@ -7,7 +7,7 @@ defined( 'ABSPATH' ) || exit;
 
 $current_user_id = get_current_user_id();
 $per_page        = 5;
-$page            = max( 1, intval( get_query_var( 'payxpert-subscriptions', 1 ) ) );
+$page            = max( 1, intval( get_query_var( 'payxpert-subscription-list', 1 ) ) );
 $offset          = ($page - 1) * $per_page;
 
 $total_items     = Payxpert_Subscription::count_user_subscriptions( $current_user_id );
@@ -20,29 +20,32 @@ $subscriptions = Payxpert_Subscription::get_user_subscriptions( $current_user_id
 <h3><?php _e('Subscriptions', 'payxpert'); ?></h3>
 
 <?php if ($subscriptions): ?>
-    <table class="shop_table shop_table_responsive my_account_orders">
+    <table class="shop_table shop_table_responsive" style="font-size:0.85rem">
         <thead>
             <tr>
-                <th><?php _e('Order ID', 'payxpert'); ?></th>
+                <th><?php _e('Referral Order ID', 'payxpert'); ?></th>
                 <th><?php _e('Type', 'payxpert'); ?></th>
                 <th><?php _e('Status', 'payxpert'); ?></th>
                 <th><?php _e('Period', 'payxpert'); ?></th>
                 <th><?php _e('Next Payment', 'payxpert'); ?></th>
                 <th><?php _e('Amount', 'payxpert'); ?></th>
+                <th><?php _e('Payment Method', 'payxpert'); ?></th>
+                <th><?php _e('Details', 'payxpert'); ?></th>
             </tr>
         </thead>
         <tbody>
         <?php foreach ($subscriptions as $subscription): 
-            $order_url = wc_get_account_endpoint_url( 'view-order' ) . $subscription->order_id;
-        ?>
+            $order_url = wc_get_account_endpoint_url('view-order') . $subscription->order_id;
+
+?>
             <tr>
                 <td>    
                     <a href="<?php echo esc_url( $order_url ); ?>">
                         #<?php echo esc_html( $subscription->order_id ); ?>
                     </a>
                 </td>
-                <td><?php echo $subscription->subscription_type; ?></td>
-                <td><?php echo esc_html($subscription->state); ?></td>
+                <td><?php echo esc_html($subscription->subscription_type); ?></td>
+                <td><?php echo esc_html(_e($subscription->state, 'payxpert')); ?></td>
                 <td><?php echo esc_html(WC_Payxpert_Utils::render_human_period($subscription->period)); ?></td>
                 <td><?php echo esc_html(
                     !empty($subscription->period_end)
@@ -50,16 +53,31 @@ $subscriptions = Payxpert_Subscription::get_user_subscriptions( $current_user_id
                     : '-'
                 ); ?></td>
                 <td><?php echo wc_price($subscription->amount / 100); ?></td>
+                <td><?php echo esc_html($payment_method); ?></td>
+                <td style="display:flex;flex-direction: column;gap: 2px;align-items: flex-start;">
+                    <a class="woocommerce-button wp-element-button button view" href="<?php echo esc_url( wc_get_account_endpoint_url('payxpert-subscription-details') . $subscription->subscription_id ); ?>">
+                        <?php _e('View', 'payxpert'); ?>
+                    </a>
+                    <?php if ($subscription->state === Payxpert_Subscription::STATUS_ACTIVE): ?>
+                       <button type="button" 
+                            class="woocommerce-button wp-element-button button cancel-subscription" 
+                            data-subscription-id="<?php echo esc_attr($subscription->subscription_id); ?>">
+                            <?php _e('Cancel', 'payxpert'); ?>
+                        </button>
+                    <?php endif; ?>
+                </td>
             </tr>
         <?php endforeach; ?>
         </tbody>
     </table>
 
+    <?php include WC_PAYXPERT_PLUGIN_FILE_PATH . 'templates/views/_html-modal-cancel-subscription.php'; ?>
+
     <?php if ( $total_pages > 1 ): ?>
         <div class="woocommerce-pagination woocommerce-pagination--without-numbers">
             <?php
              echo paginate_links([
-                'base' => trailingslashit(wc_get_account_endpoint_url('payxpert-subscriptions')) . '%#%/',
+                'base' => trailingslashit(wc_get_account_endpoint_url('payxpert-subscription-list')) . '%#%/',
                 'format' => '%#%/',
                 'current' => $page,
                 'total' => $total_pages,

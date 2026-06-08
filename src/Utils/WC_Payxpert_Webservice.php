@@ -8,12 +8,18 @@ defined( 'ABSPATH' ) || exit();
 
 use PayXpert\Connect2Pay\Connect2PayClient;
 use PayXpert\Connect2Pay\containers\constant\OperationType;
+use PayXpert\Connect2Pay\containers\constant\OrderType;
 use PayXpert\Connect2Pay\containers\constant\OrderShippingType;
 use PayXpert\Connect2Pay\containers\constant\PaymentMethod;
 use PayXpert\Connect2Pay\containers\constant\PaymentMode;
 use PayXpert\Connect2Pay\containers\constant\SubscriptionType;
+use PayXpert\Connect2Pay\containers\Account;
+use PayXpert\Connect2Pay\containers\constant\AccountAge;
+use PayXpert\Connect2Pay\containers\constant\AccountLastChange;
+use PayXpert\Connect2Pay\containers\constant\AccountPwChange;
 use PayXpert\Connect2Pay\containers\Order as c2pOrder;
 use PayXpert\Connect2Pay\containers\request\PaymentPrepareRequest;
+use PayXpert\Connect2Pay\containers\response\RefundStatus;
 use PayXpert\Connect2Pay\containers\response\TransactionAttempt;
 use PayXpert\Connect2Pay\containers\Shipping;
 use PayXpert\Connect2Pay\containers\Shopper;
@@ -25,11 +31,15 @@ class WC_Payxpert_Webservice
     const API_URL = 'https://connect2.payxpert.com';
     const API_PAYXPERT_URL = 'https://api.payxpert.com';
 
-    public static function preparePayment($configuration, $gateway, string $paymentMethod, string $paymentMode, $order = null, array $instalmentParameters = [], bool $isPayByLink = false)
+    public static function preparePayment($configuration, $gateway, string $paymentMethod, string $paymentMode, $order = null, array $instalmentParameters = [], bool $isPayByLink = false, $subscriptionInCart = false)
     {
         if (is_null($order)) {
             $customer = wp_get_current_user();
             $customer_id = $customer->ID;
+
+            if (is_null(WC()->cart)) {
+                return ['error' => __('Error cart is null', 'payxpert')];
+            }
 
             $billing = [
                 'first_name' => get_user_meta($customer_id, 'billing_first_name', true),
@@ -63,7 +73,7 @@ class WC_Payxpert_Webservice
 
         $billing_phone = $billing_phone ?: '';
         
-        // Param Shopper
+        // Shopper parameters.
         $shopper = new Shopper();
         $shopper->setId($customer_id);
         $shopper->setFirstName(substr($billing['first_name'], 0, 35));
@@ -78,9 +88,15 @@ class WC_Payxpert_Webservice
         // Optional: set HomePhonePrefix if available
         $shopper->setHomePhonePrefix(self::getCountryPhonePrefix($billing['country']));
 
-        // Param Order
+        // SCA / 3DS2: Account hints for registered customers only (not guest checkout).
+        if ( PaymentMethod::CREDIT_CARD === $paymentMethod && (int) $customer_id > 0 ) {
+            self::attach_shopper_account_for_sca( $shopper, (int) $customer_id );
+        }
+
+        // Order parameters.
         $c2pOrder = new c2pOrder();
-        $c2pOrder->setShippingType(OrderShippingType::DIGITAL_GOODS);
+        $c2pOrder->setType(OrderType::GOODS_SERVICE);
+        $c2pOrder->setShippingType(self::resolve_order_shipping_type($order));
         $c2pOrder->setId($order_id);
 
         if (!is_null($order)) {
@@ -88,7 +104,7 @@ class WC_Payxpert_Webservice
         }
         // $c2pOrder->setCartContent(self::formatOrderProducts($order)); // TODO: not working on the paygate anyway
 
-        // Param Shipping
+        // Shipping parameters.
         $shippingObj = new Shipping();
         // $shippingObj->setName(substr($shipping_method, 0, 50));
         // $shippingObj->setAddress1(self::formatAddress($shipping['address_1']));
@@ -141,7 +157,35 @@ class WC_Payxpert_Webservice
             $prepareRequest->setOperation(OperationType::SALE); //! Mandatory
         }
 
+        if (PaymentMode::RECURRENT === $paymentMode) {
+            if (!is_null($order)) {
+                $subscriptionInCart = WC_Payxpert_Utils::has_subscription_in_order($order, true);
+            }
+
+            if ($subscriptionInCart === true) {
+                $subscriptionInCart = WC_Payxpert_Utils::has_subscription_in_cart(WC()->cart->get_cart(), true);
+            }
+            
+            if (empty($subscriptionInCart)) {
+                return ['error' => __('Error while retrieving subscription data from order/cart', 'payxpert')];
+            }
+            
+            $shippingAmount = WC()->cart->get_shipping_total() * 100;
+
+            $prepareRequest->setSubscriptionType($subscriptionInCart[WC_Payxpert::SUBSCRIPTION_DURATION_TYPE]);
+            $prepareRequest->setAmount($subscriptionInCart[WC_Payxpert::SUBSCRIPTION_FIRST_PAYMENT] == 'immediate' ? $amount : 0);
+            $prepareRequest->setRebillAmount($shippingAmount + $subscriptionInCart['quantity'] * (int) ($subscriptionInCart[WC_Payxpert::SUBSCRIPTION_PRICE] * 100));
+            $prepareRequest->setRebillPeriod(WC_Payxpert_Utils::get_period_by_frequency($subscriptionInCart[WC_Payxpert::SUBSCRIPTION_FREQUENCY]));
+            
+            if ($subscriptionInCart[WC_Payxpert::SUBSCRIPTION_DURATION_TYPE] == 'normal') {
+                $prepareRequest->setRebillMaxIteration($subscriptionInCart[WC_Payxpert::SUBSCRIPTION_MAX_CYCLES]);
+            }
+
+            $prepareRequest->setOperation(OperationType::SALE); //! Mandatory
+        }
+
         // Ctrl URLs
+        $ipnSecret = WC_Payxpert_Utils::ensure_ipn_secret();
         $prepareRequest->setCtrlRedirectURL(
             add_query_arg([
                 'payxpert_return' => true,
@@ -149,6 +193,7 @@ class WC_Payxpert_Webservice
         );
         $prepareRequest->setCtrlCallbackURL(
             add_query_arg([
+                'px_ipn_secret' => $ipnSecret,
             ], home_url('/wc-api/' . $gateway))
         ); 
         $prepareRequest->setCtrlCustomData(http_build_query($customData));
@@ -164,7 +209,7 @@ class WC_Payxpert_Webservice
             $prepareRequest->setTimeOut('P30D');
         }
 
-        // Appel à l’API
+        // API request.
         $client = new Connect2PayClient(
             self::API_URL,
             $configuration['payxpert_originator_id'],
@@ -225,17 +270,26 @@ class WC_Payxpert_Webservice
         ];
     }
 
-    public static function refund_transaction($configuration, string $transactionId, int $amount)
+    public static function refund_transaction($configuration, string $transactionId, int $amount, bool $useOtherApi = false, bool $cancelSubscription = false)
     {
-        $c2pClient = new Connect2PayClient(
-            self::API_URL,
-           $configuration['payxpert_originator_id'],
-           $configuration['payxpert_password']
-        );
+        if ($useOtherApi) {
+            $status = self::refund_transaction_special($configuration, $transactionId, $amount, $cancelSubscription);
 
-        $status = $c2pClient->refundTransaction($transactionId, $amount);
-        if (null == $status || null == $status->getCode()) {
-            return ['error' => $c2pClient->getClientErrorMessage()];
+            if (null == $status || (is_array($status) && isset($status['error'])) || null == $status->getCode()) {
+                return ['error' => $status['error'] ?? 'unknown'];
+            }
+        } else {
+            $c2pClient = new Connect2PayClient(
+                self::API_URL,
+                $configuration['payxpert_originator_id'],
+                $configuration['payxpert_password']
+            );
+
+            $status = $c2pClient->refundTransaction($transactionId, $amount);
+
+            if (null == $status || null == $status->getCode()) {
+                return ['error' => $c2pClient->getClientErrorMessage()];
+            }
         }
 
         return [
@@ -245,82 +299,72 @@ class WC_Payxpert_Webservice
         ];
     }
 
-    // public static function getPaymentStatus(PayxpertConfiguration $configuration, string $merchantToken)
-    // {
-    //     // Init api
-    //     $c2pClient = new Connect2PayClient(
-    //         self::API_URL,
-    //        $configuration['payxpert_originator_id'],
-    //        $configuration['payxpert_password']
-    //     );
-
-    //     /** @var PaymentStatus */
-    //     $status = $c2pClient->getPaymentStatus($merchantToken);
-    //     if (null == $status || null == $status->getErrorCode()) {
-    //         return ['error' => $c2pClient->getClientErrorMessage()];
-    //     }
-
-    //     $result = [
-    //         'merchant_token' => $status->getMerchantToken(),
-    //         'status' => $status->getStatus(),
-    //         'error_code' => $status->getErrorCode(),
-    //         'custom_data' => $status->getCtrlCustomData(),
-    //         'transaction_number' => count($status->getTransactions()),
-    //         'last_transaction' => null,
-    //         'others_transactions' => null,
-    //     ];
-
-    //     $transactionsCount = count($status->getTransactions());
-    //     if ($transactionsCount > 0) {
-    //         $transaction = $status->getLastInitialTransactionAttempt();
-
-    //         /* @phpstan-ignore-next-line */
-    //         if ($transaction) {
-    //             $shopper = $transaction->getShopper();
-    //             $paymentMeanInfo = $transaction->getPaymentMeanInfo();
-
-    //             $result['last_transaction'] = [
-    //                 'transaction_id' => $transaction->getTransactionID(),
-    //                 'payment_method' => $transaction->getPaymentMethod(),
-    //                 'payment_network' => $transaction->getPaymentNetwork(),
-    //                 'operation' => $transaction->getOperation(),
-    //                 'amount100' => $transaction->getAmount(),
-    //                 'amount' => $transaction->getAmount() / 100,
-    //                 'currency' => $status->getCurrency(),
-    //                 'result_code' => $transaction->getResultCode(),
-    //                 'result_message' => $transaction->getResultMessage(),
-    //                 'transaction_date' => $transaction->getDateAsDateTime() ? ($transaction->getDateAsDateTime())->format('Y-m-d H:i:s T') : null,
-    //                 'subscription_id' => $transaction->getSubscriptionID(),
-    //                 'payment_mean_info' => self::getFormatPaymentMeanInfo($transaction, $paymentMeanInfo),
-    //                 'shopper' => self::getFormatShopperInfo($shopper),
-    //             ];
-    //         }
-
-    //         if ($transactionsCount > 1) {
-    //             foreach ($status->getTransactions() as $attempt) {
-    //                 if ($attempt->getTransactionId() != $transaction->getTransactionId()) {
-    //                     $result['others_transactions'][] = [
-    //                         'transaction_id' => $attempt->getTransactionID(),
-    //                         'attempt_date' => null == $attempt->getDateAsDateTime() ? null : ($attempt->getDateAsDateTime())->format('Y-m-d H:i:s T'),
-    //                         'payment_method' => $attempt->getPaymentMethod(),
-    //                         'operation' => $attempt->getOperation(),
-    //                         'amount100' => $attempt->getAmount(),
-    //                         'amount' => $attempt->getAmount() / 100,
-    //                         'currency' => $status->getCurrency(),
-    //                         'result_code' => $attempt->getResultCode(),
-    //                         'result_message' => $attempt->getResultMessage(),
-    //                     ];
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     return $result;
-    // }
-
-    public static function get_transaction_info($configuration, string $transactionId)
+    public static function refund_transaction_special($configuration, string $transactionId, int $amount, bool $cancelSubscription = false)
     {
-        // Init api
+        $url = self::API_PAYXPERT_URL . str_replace(":transactionID", (string) $transactionId, '/transaction/:transactionID/refund');
+        $userpwd = $configuration['payxpert_originator_id'] . ':' . $configuration['payxpert_password'];
+
+        $response = wp_remote_post(
+            $url,
+            [
+                'timeout' => 30,
+                'headers' => [
+                    'Content-Type'  => 'application/json',
+                    'Accept'        => 'application/json',
+                    'Authorization' => 'Basic ' . base64_encode($userpwd),
+                ],
+                'body' => wp_json_encode(['amount' => $amount, 'cancelSubscription' => $cancelSubscription]),
+            ]
+        );
+
+        if (is_wp_error($response)) {
+            return ['error' => $response->get_error_message()];
+        }
+
+        $httpCode = wp_remote_retrieve_response_code($response);
+        $json = wp_remote_retrieve_body($response);
+
+        if ($httpCode != 200) {
+            return ['error' => "Received HTTP code " . $httpCode . " from payment page."];
+        }
+
+        if ($json === '') {
+            return ['error' => 'Error requesting ' . $url];
+        }
+
+        $result = json_decode($json, true);
+        WC_Payxpert_Logger::debug(print_r($result, true));
+        if ($result != null) {
+            $rfStatus = new RefundStatus();
+
+            if (isset($result['errorCode'])) {
+                $rfStatus->setCode($result['errorCode']);
+            }
+            if (isset($result['errorMessage'])) {
+                $rfStatus->setMessage($result['errorMessage']);
+            }
+            if (isset($result['transactionID'])) {
+                $rfStatus->setTransactionID($result['transactionID']);
+            }
+            if (isset($result['operation'])) {
+                $rfStatus->setOperation($result['operation']);
+            }
+
+            return $rfStatus;
+        }
+
+        return ['error' => 'JSON decoding error.'];
+    }
+
+    /**
+     * @param bool $with_transaction_attempt When true, merges internal key _transaction_attempt (Connect2Pay object) into the formatted array so the order can be finalized without a second API call.
+     */
+    public static function get_transaction_info($configuration, $transactionId, bool $useOtherApi = false, bool $with_transaction_attempt = false)
+    {
+        if ($useOtherApi) {
+            return self::get_transaction_info_special($configuration, $transactionId, $with_transaction_attempt);
+        }
+
         $c2pClient = new Connect2PayClient(
             self::API_URL,
             $configuration['payxpert_originator_id'],
@@ -333,7 +377,110 @@ class WC_Payxpert_Webservice
             return ['error' => $c2pClient->getClientErrorMessage()];
         }
 
-        return self::formatTransaction($transaction);
+        $formatted = self::formatTransaction($transaction);
+        if ($with_transaction_attempt) {
+            $formatted['_transaction_attempt'] = $transaction;
+        }
+
+        return $formatted;
+    }
+
+    public static function get_transaction_info_special($configuration, $transactionId, bool $with_transaction_attempt = false)
+    {
+        $url = self::API_PAYXPERT_URL . str_replace(":transactionID", (string) $transactionId, '/transaction/:transactionID');
+        $userpwd = $configuration['payxpert_originator_id'] . ':' . $configuration['payxpert_password'];
+
+        $response = wp_remote_get(
+            $url,
+            [
+                'timeout' => 30,
+                'headers' => [
+                    'Accept'        => 'application/json',
+                    'Authorization' => 'Basic ' . base64_encode($userpwd),
+                ],
+            ]
+        );
+
+        if (is_wp_error($response)) {
+            return ['error' => $response->get_error_message()];
+        }
+
+        $httpCode = wp_remote_retrieve_response_code($response);
+        $json = wp_remote_retrieve_body($response);
+
+        if ($httpCode != 200) {
+            return ['error' => "Received HTTP code " . $httpCode . " from payment page."];
+        }
+
+        if ($json === '') {
+            return ['error' => 'Error requesting ' . $url];
+        }
+
+        $result = json_decode($json, true);
+
+        if ($result != null) {
+            $json = self::mapToTransactionAttemptJson($result);
+            $transactionAttempt = TransactionAttempt::getFromJson((object) $json);
+            $formatted = self::formatTransaction($transactionAttempt);
+            if ($with_transaction_attempt) {
+                $formatted['_transaction_attempt'] = $transactionAttempt;
+            }
+            return $formatted;
+        }
+
+        return ['error' => 'JSON decoding error.'];
+    }
+
+    private static function mapToTransactionAttemptJson(array $response)
+    {
+        $t = $response['transaction'] ?? [];
+        $p = $t['paymentMeanInfo'] ?? [];
+        $s = $t['shopper'] ?? [];
+
+        return [
+            // Exact TransactionAttempt properties.
+            'paymentID' => null,
+            'paymentMerchantToken' => null,
+            'paymentMethod' => ucfirst($t['paymentType'] ?? ''),
+            'operation' => $t['operation'] ?? null,
+            'date' => isset($t['date']) ? $t['date'] : null,
+            'amount' => $t['amount'] ?? 0,
+            'refundedAmount' => (($t['operation'] ?? '') === 'refund') ? ($t['amount'] ?? 0) : 0,
+            'currency' => $t['currency'] ?? null,
+            'resultCode' => $response['errorCode'] ?? null,
+            'resultMessage' => $response['errorMessage'] ?? null,
+            'status' => $t['status'] ?? null,
+            'shopper' => [
+                'firstName' => $s['firstName'] ?? $t['shopperName'] ?? null,
+                'lastName' => $s['lastName'] ?? null,
+                'email' => $s['email'] ?? $t['shopperEmail'] ?? null,
+                'address1' => $s['address1'] ?? null,
+                'zipcode' => $s['zipcode'] ?? null,
+                'city' => $s['city'] ?? null,
+                'countryCode' => $s['countryCode'] ?? null,
+                'birthDate' => $s['birthDate'] ?? null,
+                'idNumber' => $s['idNumber'] ?? null,
+                'ipAddress' => $s['ip_address'] ?? $t['customerIP'] ?? null,
+            ],
+            'transactionID' => $t['transactionID'] ?? null,
+            'refTransactionID' => $t['referralID'] ?? null,
+            'providerTransactionID' => $t['transactionID'] ?? null,
+            'subscriptionID' => $t['subscriptionID'] ?? null,
+            'paymentMeanInfo' => [
+                'cardNumber' => $p['cardNumber'] ?? null,
+                'cardExpireYear' => $p['cardExpireYear'] ?? null,
+                'cardExpireMonth' => $p['cardExpireMonth'] ?? null,
+                'cardHolderName' => $p['cardHolderName'] ?? null,
+                'cardBrand' => $p['cardBrand'] ?? null,
+                'cardLevel' => $p['cardLevel'] ?? null,
+                'cardSubType' => $p['cardSubType'] ?? null,
+                'iinCountry' => $p['iinCountry'] ?? null,
+                'iinBankName' => $p['iinBankName'] ?? null,
+                'is3DSecure' => $p['is3DSecure'] ?? false,
+            ],
+            'orderID' => $t['orderID'] ?? null,
+            'orderDescription' => $t['orderDescription'] ?? null,
+        ];
     }
 
     public static function getAccountInfo($publicKey, $privateKey)
@@ -372,6 +519,7 @@ class WC_Payxpert_Webservice
         $themes = $info->getThemes();
 
         if ($themes) {
+            $maxVersion = null;
             foreach ($themes as $theme) {
                 foreach ($theme->getSeamlessLibraries() as $seamlessLibrary) {
 
@@ -441,31 +589,33 @@ class WC_Payxpert_Webservice
     {
         $url = self::API_PAYXPERT_URL . '/subscription/' . $subscriptionID;
 
-        $ch = curl_init();
+        $userpwd = $configuration['payxpert_originator_id'] . ':' . $configuration['payxpert_password'];
+        $response = wp_remote_get(
+            $url,
+            [
+                'timeout' => 30,
+                'headers' => [
+                    'Content-Type'  => 'application/x-www-form-urlencoded',
+                    'Accept'        => 'application/json',
+                    'Authorization' => 'Basic ' . base64_encode($userpwd),
+                ],
+            ]
+        );
 
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Pour obtenir la réponse
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, $configuration['payxpert_originator_id'] . ":" . $configuration['payxpert_password']);
-
-        $headers = [
-            'Content-Type: application/x-www-form-urlencoded',
-            'Accept: application/json'
-        ];
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $response = curl_exec($ch);
-
-        if (curl_errno($ch)) {
-            return ['error' => curl_error($ch)];
+        if (is_wp_error($response)) {
+            return ['error' => $response->get_error_message()];
         }
 
-        curl_close($ch);
+        $code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
 
-        $data = json_decode($response, true);
+        if (!is_array($data)) {
+            return ['error' => sprintf('Invalid API response (HTTP %d).', (int) $code)];
+        }
 
-        if ($data['errorCode'] != '000') {
-            return ['error' => $data['errorMessage']];
+        if (($data['errorCode'] ?? '') !== '000') {
+            return ['error' => $data['errorMessage'] ?? 'Unknown API error'];
         }
 
         return $data;
@@ -499,8 +649,7 @@ class WC_Payxpert_Webservice
             $configuration['payxpert_password']
         );
 
-        /* @phpstan-ignore-next-line */
-        if (false == $c2pClient->handleCallbackStatus()) {
+        if ($c2pClient->handleCallbackStatus() === false) {
             return false;
         }
 
@@ -510,9 +659,57 @@ class WC_Payxpert_Webservice
             'errorCode' => $status->getErrorCode(),
             'errorMessage' => $status->getErrorMessage(),
             'customData' => $status->getCtrlCustomData(),
-            'transaction' => $status->getLastTransactionAttempt(),
+            'transaction' => $status->getLastInitialTransactionAttempt(),
             'orderId' => $status->getOrderId(),
         ];
+    }
+
+    public static function cancelSubscription($configuration, int $subscriptionID, int $cancelReason)
+    {
+        $c2pClient = new Connect2PayClient(
+            self::API_URL,
+            $configuration['payxpert_originator_id'],
+            $configuration['payxpert_password']
+        );
+
+        $code = $c2pClient->cancelSubscription($subscriptionID, $cancelReason);
+
+        if (null == $code || $code != 200) {
+            return ['error' => $c2pClient->getClientErrorMessage()];
+        }
+
+        return [
+            'code' => $code,
+            'message' => $c2pClient->getClientErrorMessage()
+        ];
+    }
+    
+    /**
+     * @param \WC_Order|null $order
+     */
+    private static function resolve_order_shipping_type($order): string
+    {
+        if ($order instanceof \WC_Order) {
+            if (method_exists($order, 'needs_shipping')) {
+                return $order->needs_shipping() ? OrderShippingType::TO_CARDHOLDER : OrderShippingType::DIGITAL_GOODS;
+            }
+
+            // Backward compatibility for older WooCommerce versions.
+            if (method_exists($order, 'needs_shipping_address')) {
+                return $order->needs_shipping_address() ? OrderShippingType::TO_CARDHOLDER : OrderShippingType::DIGITAL_GOODS;
+            }
+
+            if (method_exists($order, 'get_items')) {
+                $shipping_items = $order->get_items('shipping');
+                return !empty($shipping_items) ? OrderShippingType::TO_CARDHOLDER : OrderShippingType::DIGITAL_GOODS;
+            }
+        }
+
+        if (function_exists('WC') && WC()->cart && WC()->cart->needs_shipping()) {
+            return OrderShippingType::TO_CARDHOLDER;
+        }
+
+        return OrderShippingType::DIGITAL_GOODS;
     }
 
     private static function getFormatPaymentMeanInfo(TransactionAttempt $transaction, $paymentMeanInfo = null)
@@ -679,6 +876,7 @@ class WC_Payxpert_Webservice
         return [
             'payment_id' => $transaction->getPaymentID(),
             'payment_merchant_token' => $transaction->getPaymentMerchantToken(),
+            'order_id' => $transaction->getOrderID(),
             'transaction_id' => $transaction->getTransactionID(),
             'ref_transaction_id' => $transaction->getRefTransactionID(),
             'provider_transaction_id' => $transaction->getProviderTransactionID(),
@@ -696,6 +894,58 @@ class WC_Payxpert_Webservice
             'payment_mean_info' => self::getFormatPaymentMeanInfo($transaction, $paymentMeanInfo),
             'shopper' => self::getFormatShopperInfo($shopper),
         ];
+    }
+
+    /**
+     * Connect2Pay Shopper Account (SCA / 3DS v2 hints). Only for logged-in customers (not guest).
+     */
+    private static function attach_shopper_account_for_sca( Shopper $shopper, int $customer_id ): void {
+        if ( $customer_id <= 0 ) {
+            return;
+        }
+
+        $user = get_userdata( $customer_id );
+        if ( ! $user instanceof \WP_User ) {
+            return;
+        }
+
+        $reg_ts = strtotime( $user->user_registered );
+        if ( ! $reg_ts ) {
+            $reg_ts = time();
+        }
+
+        $days = (int) floor( ( time() - $reg_ts ) / DAY_IN_SECONDS );
+
+        if ( $days < 30 ) {
+            $age = AccountAge::LESS_30_DAYS;
+            $lastChange = AccountLastChange::LESS_30_DAYS;
+            $pwChange = AccountPwChange::LESS_30_DAYS;
+        } elseif ( $days <= 60 ) {
+            $age = AccountAge::BETWEEN_30_60_DAYS;
+            $lastChange = AccountLastChange::BETWEEN_30_60_DAYS;
+            $pwChange = AccountPwChange::BETWEEN_30_60_DAYS;
+        } else {
+            $age = AccountAge::MORE_60_DAYS;
+            $lastChange = AccountLastChange::MORE_60_DAYS;
+            $pwChange = AccountPwChange::MORE_60_DAYS;
+        }
+
+        $dateStr = gmdate( 'Ymd', $reg_ts );
+
+        $account = new Account();
+        $account->setAge( $age );
+        $account->setDate( $dateStr );
+        $account->setLastChange( $lastChange );
+        $account->setLastChangeDate( $dateStr );
+        $account->setPwChange( $pwChange );
+        $account->setPwChangeDate( $dateStr );
+
+        if ( function_exists( 'wc_get_customer_order_count' ) ) {
+            // Field name is six-month window; we send total WC order count capped (best-effort when no date filter).
+            $account->setOrderSixMonths( min( 99, (int) wc_get_customer_order_count( $customer_id ) ) );
+        }
+
+        $shopper->setAccount( $account );
     }
 
     private static function getCountryPhonePrefix($country_code) {
