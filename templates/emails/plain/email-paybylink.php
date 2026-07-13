@@ -1,4 +1,10 @@
 <?php
+/**
+ * Email Paybylink.
+ *
+ * @package Payxpert
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -7,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Template Email PayByLink - Plain Text
  *
  * Variables disponibles :
+ *
  * @var string $firstname
  * @var string $lastname
  * @var string $shop_name
@@ -21,24 +28,26 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @var string $shop_url
  */
 
-echo sprintf( __( 'Hello %s,', 'payxpert' ), $firstname ) . "\n\n";
+// translators: %s is the customer first name.
+echo esc_html( sprintf( __( 'Hello %s,', 'payxpert' ), $firstname ) ) . "\n\n";
 
-echo __( 'You have requested to pay your order using PayByLink via PayXpert. Below are the details of your order and the payment link.', 'payxpert' ) . "\n\n";
+echo esc_html( __( 'You have requested to pay your order using PayByLink via PayXpert. Below are the details of your order and the payment link.', 'payxpert' ) ) . "\n\n";
 
-echo $payment_link . "\n\n";
+echo esc_url( $payment_link ) . "\n\n";
 
-echo __( 'Payment deadline:', 'payxpert' ) . ' ' . $payment_deadline . "\n\n";
+echo esc_html( __( 'Payment deadline:', 'payxpert' ) ) . ' ' . esc_html( $payment_deadline ) . "\n\n";
 
-echo "==== " . __( 'Order Summary', 'payxpert' ) . " ====\n";
-echo __( 'Order Reference:', 'payxpert' ) . ' ' . $order_reference . "\n";
-echo __( 'Order Date:', 'payxpert' ) . ' ' . $order_date . "\n\n";
+echo '==== ' . esc_html( __( 'Order Summary', 'payxpert' ) ) . " ====\n";
+echo esc_html( __( 'Order Reference:', 'payxpert' ) ) . ' ' . esc_html( $order_reference ) . "\n";
+echo esc_html( __( 'Order Date:', 'payxpert' ) ) . ' ' . esc_html( $order_date ) . "\n\n";
 
-echo __( 'Products:', 'payxpert' ) . "\n";
-echo strip_tags( $order_products ) . "\n";
+echo esc_html( __( 'Products:', 'payxpert' ) ) . "\n";
+echo esc_html( wp_strip_all_tags( $order_products ) ) . "\n";
 
-echo __( 'Subtotal:', 'payxpert' ) . ' ' . $order_subtotal . "\n";
-echo __( 'Shipping:', 'payxpert' ) . ' ' . $order_shipping . "\n";
-echo __( 'Total:', 'payxpert' ) . ' ' . $order_total . "\n\n";
+echo esc_html( __( 'Subtotal:', 'payxpert' ) ) . ' ' . esc_html( wp_strip_all_tags( $order_subtotal ) ) . "\n";
+echo esc_html( __( 'Shipping:', 'payxpert' ) ) . ' ' . esc_html( wp_strip_all_tags( $order_shipping ) ) . "\n";
+echo esc_html( __( 'Total:', 'payxpert' ) ) . ' ' . esc_html( wp_strip_all_tags( $order_total ) ) . "\n\n";
 
-echo sprintf( __( 'Thank you for your trust, %s', 'payxpert' ), $shop_name ) . "\n";
-echo $shop_url . "\n";
+// translators: %s is the shop name.
+echo esc_html( sprintf( __( 'Thank you for your trust, %s', 'payxpert' ), $shop_name ) ) . "\n";
+echo esc_url( $shop_url ) . "\n";

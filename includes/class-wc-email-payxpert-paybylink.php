@@ -1,4 +1,9 @@
 <?php
+/**
+ * Wc Email Payxpert Paybylink.
+ *
+ * @package Payxpert
+ */
 
 use Payxpert\Utils\WC_Payxpert_Logger;
 
@@ -12,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Sends the PayByLink payment URL to the customer by email.
  */
 class WC_Email_Payxpert_Paybylink extends WC_Email {
-	
+
 	/**
 	 * Constructor.
 	 */
@@ -21,37 +26,38 @@ class WC_Email_Payxpert_Paybylink extends WC_Email {
 		$this->title          = 'PayXpert - PayByLink';
 		$this->description    = __( 'Email sent to a customer with a payment link', 'payxpert' );
 		$this->customer_email = true;
-		
+
 		$this->heading = __( 'Complete your order', 'payxpert' );
 		$this->subject = __( 'Pending payment for your order on {site_title}', 'payxpert' );
-		
+
 		$this->template_html  = 'email-paybylink.php';
 		$this->template_plain = 'plain/email-paybylink.php';
-		
+
 		$this->recipient = ''; // Set in trigger() from $data.
-		
+
 		parent::__construct();
 	}
-	
+
 	/**
 	 * Sends the email.
 	 *
-	 * @param array $data Template variables.
+	 * @param array<string, mixed> $data Template variables.
+	 * @return bool
 	 */
-	public function trigger( $data ) {
+	public function trigger( $data ): bool {
 		if ( empty( $data['recipient'] ) || empty( $data['order'] ) || empty( $data['payment_link'] ) ) {
-			return;
+			return false;
 		}
-		
+
 		$this->recipient = $data['recipient'];
 		$this->data      = $data;
-		
+
 		$this->object = $data['order'];
-		
+
 		if ( ! $this->is_enabled() || ! $this->get_recipient() ) {
-			return;
+			return false;
 		}
-		
+
 		return $this->send(
 			$this->get_recipient(),
 			$this->get_subject(),
@@ -60,7 +66,7 @@ class WC_Email_Payxpert_Paybylink extends WC_Email {
 			$this->get_attachments()
 		);
 	}
-	
+
 	/**
 	 * Contenu HTML.
 	 */
@@ -74,7 +80,7 @@ class WC_Email_Payxpert_Paybylink extends WC_Email {
 		);
 		return ob_get_clean();
 	}
-	
+
 	/**
 	 * Contenu texte brut (si besoin).
 	 */

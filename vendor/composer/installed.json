@@ -51,6 +51,6 @@
             "install-path": "../payxpert/connect2pay"
         }
     ],
-    "dev": true,
+    "dev": false,
     "dev-package-names": []
 }

@@ -1,0 +1,80 @@
+*** PayXpert Payment Module Changelog ***
+
+2026-07-01 - version 2.3.2
+
+* Added - Added marketplace `changelog.txt` / `changelog.fr.txt` for WooCommerce Marketplace submission
+* Added - Added marketplace `readme.txt` / `readme.fr.txt` and GPL v2+ `LICENSE` file
+* Added - Added a local quality precheck (`composer qa`): PHP lint, WooCommerce coding standards (PHPCS) with baseline for existing code, and PHP 8.4 explicit nullable type rule
+* Fixed - Fixed duplicate country prefix when sending shopper phone number in payment payload (homePhone / homePhonePrefix)
+* Fixed - Fixed implicit nullable parameter types in exception constructors for PHP 8.4 compatibility
+* Fixed - Security hardening on the backend support form and stored credentials handling
+* Fixed - XSS security hardening
+* Fixed - Removed `debug_backtrace` from the logger and corrected nonce verification (`false !== wp_verify_nonce`) for marketplace compliance
+* Fixed - Replaced admin flash notices stored via `set_transient()` with user meta storage (WordPress 6.8+ `setted_transient` deprecation)
+* Fixed - Added `Tested up to` and `WC tested up to` plugin headers and switched license to GPL v2 or later for WooCommerce Marketplace validation
+* Removed - Removed the deprecated PayByLink `process_payment` method
+* Removed - Removed the Fintecture banner from the module configuration page
+* Removed - Removed `README.md` and `CHANGELOG.md` in favor of marketplace `.txt` documentation files
+
+2026-05-22 - version 2.3.1
+
+* Added - Added a customization field for the subscription payment label on the storefront
+* Fixed - Fixed JS files for WooCommerce Blocks to comply with React requirements
+* Fixed - Fixed an order processing issue related to certain WooCommerce versions
+* Fixed - Fixed redirect after 3D Secure payment
+* Changed - Improved redirect behavior when a payment issue occurs
+* Changed - Updated the mixed cart error message (standard / subscription)
+* Changed - Updated a label in the module configuration
+* Fixed - Strengthened security of order verification endpoints used during iFrame payment flows
+* Fixed - Strengthened IPN and storefront security
+* Removed - Removed the token refresh endpoint
+
+2026-04-24 - version 2.3.0
+
+* Added - Merchants can now disable a customer's subscription from the subscriptions list in the backend
+* Added - Added subscription-based payment method
+* Added - Added a subscription information block in the cart section of checkout
+* Added - Added the ability to refund a subscription occurrence via the alternate API
+* Fixed - Fixed a translation issue in subscription data for variable products
+* Fixed - Fixed the display of refund transactions in subscription details
+* Fixed - Fixed the status of automatic (subscription) orders when payment failed
+* Fixed - Added cart blocking when a subscription already exists in the cart
+
+2026-03-20 - version 2.2.3
+
+* Changed - The iFrame now waits for backend order creation confirmation before starting the payment process
+* Changed - The iFrame now requests the cardholder name
+* Changed - Logged-out users are now redirected to the order-pay page when payment fails
+* Fixed - Fixed the display of payment method status on the Payments page
+* Fixed - Cleared the IPN response buffer to avoid stray JSON output
+
+2026-01-13 - version 2.2.2
+
+* Added - Added the ability to send a PayByLink payment for orders with "Failed" status
+* Changed - Disabled Apple Pay in seamless mode (not yet available)
+* Fixed - Fixed the Apple Pay payment method (logo and display in seamless mode)
+
+2025-12-19 - version 2.2.1
+
+* Fixed - Fixed a 500 error on the checkout page in guest mode
+* Fixed - Prepared the applePayEnabled variable on the PHP side for seamless JS
+
+2025-12-15 - version 2.2.0
+
+* Fixed - Fixed the post-3DS flow in seamless mode; the modal now closes and redirects the customer to the correct page
+* Changed - Updated payment method logo display on the storefront; Amex no longer appears if the payment method is disabled in the backend
+* Changed - Dynamic upgrade of the seamless JS version via getAccountInfo
+* Removed - Removed the additional fields section on the checkout page for credit card payment in redirect mode
+
+2025-11-10 - version 2.1.0
+
+* Added - Added customer information display when available in seamless mode
+* Fixed - Fixed the "In progress" status when an order is validated with virtual products
+* Changed - Updated the sending conditions for the Pay By Link payment method
+
+2025-08-27 - version 2.0.0
+
+* Added - Added the WooCommerce version to the module configuration information section
+* Added - Added readme.txt
+* Added - Added a link to the WooCommerce plugin user guide
+* Removed - Removed Alipay & WeChat settings (planned for a future release)

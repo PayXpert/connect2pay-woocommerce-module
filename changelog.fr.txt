@@ -1,0 +1,80 @@
+*** Journal des modifications du module PayXpert Payment ***
+
+2026-07-01 - version 2.3.2
+
+* Ajouté - Ajout des fichiers marketplace `changelog.txt` / `changelog.fr.txt` pour la soumission WooCommerce Marketplace
+* Ajouté - Ajout des fichiers marketplace `readme.txt` / `readme.fr.txt` et du fichier `LICENSE` (GPL v2+)
+* Ajouté - Mise en place d'un precheck qualité local (`composer qa`) : lint PHP, contrôle des standards WooCommerce (PHPCS) avec baseline du code existant et règle PHP 8.4 (nullable explicite)
+* Corrigé - Correction du doublon d'indicatif pays sur les champs `shopper.homePhone` et `shopper.homePhonePrefix` dans le payload de paiement
+* Corrigé - Correction des types nullable implicites (paramètres `?\Exception`) pour compatibilité PHP 8.4
+* Corrigé - Renfort de sécurité sur le formulaire d'assistance BO et l'enregistrement des informations d'identification
+* Corrigé - Renfort de sécurité XSS
+* Corrigé - Suppression de `debug_backtrace` dans le logger et correction de la vérification de nonce (`false !== wp_verify_nonce`) pour conformité marketplace
+* Corrigé - Remplacement des notices admin basées sur `set_transient()` par une persistance en user meta (compatibilité WordPress 6.8+, hook `setted_transient` déprécié)
+* Corrigé - Ajout des en-têtes `Tested up to` et `WC tested up to`, et passage de la licence en GPL v2 or later (exigences marketplace WooCommerce)
+* Supprimé - Suppression de la méthode process_payment pour paybylink (obsolète)
+* Supprimé - Suppression de la bannière Fintecture de la page de configuration du module
+* Supprimé - Suppression de `README.md` et `CHANGELOG.md` au profit des fichiers documentation marketplace `.txt`
+
+2026-05-22 - version 2.3.1
+
+* Ajouté - Ajout d'un champ de customisation du label de paiement par abonnement pour le FO
+* Corrigé - Correction des fichiers JS pour woocommerce-blocs en adéquation avec les règles REACT
+* Corrigé - Correction d'un problème de passage de commande en fonction de la version de woocommerce utilisé
+* Corrigé - Correction de la redirection après un paiement 3DS
+* Modifié - Modification de la redirection en cas de problème de paiement
+* Modifié - Modification du message d'erreur de panier mixte (standart/abonnement)
+* Modifié - Modification d'un label de la configuration
+* Corrigé - Amélioration de la sécurité des endpoints disponibles du module pour vérification de commande après paiement en iFrame
+* Corrigé - Amélioration de la sécurité IPN et FO
+* Supprimé - Suppression du endpoint de raffraichissement de TOKEN
+
+2026-04-24 - version 2.3.0
+
+* Ajouté - Le marchand peut désormais désactiver l'abonnement d'un client final via la liste des abonnements en BO.
+* Ajouté - Ajout du mode de paiement par abonnement.
+* Ajouté - Ajout d'un bloc d'informations à propos de l'abonnement du panier dans le checkout.
+* Ajouté - Ajout de la possibilité de rembourser une occurrence d'abonnement avec l'autre API.
+* Corrigé - Correction d'un problème de traduction dans les données d'abonnement sur un produit avec variations.
+* Corrigé - Correction du display des transactions de remboursement dans le détail d'un abonnement.
+* Corrigé - Correction du statut pour les commandes automatiques (abonnement) lorsque le paiement n'a pas abouti.
+* Corrigé - Ajout du blocage d'ajout au panier pour un abonnement si un autre abonnement existe déjà dans le panier.
+
+2026-03-20 - version 2.2.3
+
+* Modifié - L'iFrame attend désormais la confirmation de création de commande du BO pour lancer le processus de paiement
+* Modifié - L'iFrame demande désormais le cardHolderName.
+* Modifié - Redirige l'utilisateur non connecté vers la page order-pay lorsque le paiement échoue
+* Corrigé - Correction de l'affichage du statut des méthodes de paiement dans la page "Paiements".
+* Corrigé - Clear le buffer de réponse du flux IPN pour éviter les JSON parasites.
+
+2026-01-13 - version 2.2.2
+
+* Ajouté - Ajout de la possibilité d'envoyer un paiement PayByLink pour le statut de commande "Echoué"
+* Modifié - Désactivation du mode de paiement ApplePay en mode seamless (non disponible pour le moment).
+* Corrigé - Réparation du mode de paiement Applepay. Logo + display (Seamless).
+
+2025-12-19 - version 2.2.1
+
+* Corrigé - Correction erreur 500 sur page checkout en mode GUEST.
+* Corrigé - Prépare la variable applePayEnabled côté PHP pour le seamless JS
+
+2025-12-15 - version 2.2.0
+
+* Corrigé - Correction du flux après 3DS en mode seamless. Ferme désormais la modal et renvoie le client vers la bonne page.
+* Modifié - Modification de l'affichage des logos des méthodes de paiement en FO. Amex n'apparait plus si le mode de paiement n'est pas activé en BO.
+* Modifié - Upgrade dynamique de la version du JS pour le seamless via getAccountInfo
+* Supprimé - Suppression de la zone de champs additionnel dans la page de checkout pour le mode de paiement CC en mode redirection
+
+2025-11-10 - version 2.1.0
+
+* Ajouté - Ajout des informations clients si disponible en mode seamless
+* Corrigé - Correction du statut 'En cours' lorsque la commande est validée avec des produits virtuels
+* Modifié - Modification des conditions d'envoi de la méthode de paiement PayByLink
+
+2025-08-27 - version 2.0.0
+
+* Ajouté - Ajout de la version de WooCommerce dans la section informative de la configuration du module
+* Ajouté - Ajout de readme.txt
+* Ajouté - Ajout du lien vers le guide utilisateur Plugin WooCommerce
+* Supprimé - Suppression des paramètrages Alipay & WeChat. Prévu au prochain lot.

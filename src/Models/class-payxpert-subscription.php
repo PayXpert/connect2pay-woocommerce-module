@@ -1,0 +1,415 @@
+<?php
+/**
+ * Payxpert Subscription.
+ *
+ * @package Payxpert
+ */
+
+namespace Payxpert\Models;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Payxpert Subscription.
+ */
+class Payxpert_Subscription extends Payxpert_Abstract_Model {
+
+	const STATUS_DISABLED = 'disabled';
+	const STATUS_CANCELED = 'canceled';
+	const STATUS_ACTIVE   = 'active';
+
+	const CUSTOMER_CANCEL_REASONS = array(
+		'1007' => 'Didn’t like the site',
+		'1008' => 'Disagree (‘did not do it’ or ‘do not recognize the transaction’)',
+		'1010' => 'I could not get in to the site',
+		'1011' => 'No problem, just moving on',
+		'1012' => 'Not enough updates',
+		'1013' => 'Problems with the movies/videos',
+		'1014' => 'Site was too slow',
+		'1015' => 'The site did not work',
+		'1016' => 'Too expensive',
+		'1017' => 'Un-authorized signup by family member',
+		'1019' => 'Webmaster requested to cancel',
+		'1020' => 'I haven’t received my item',
+		'1021' => 'The item was damaged or defective',
+		'1022' => 'The box was empty',
+		'1023' => 'The order was incomplete',
+	);
+
+	const SERVER_CANCEL_REASONS = array(
+		'1000' => 'Bank denial',
+		'1001' => 'Canceled due to refund',
+		'1002' => 'Canceled due to retrieval request',
+		'1003' => 'Cancellation letter sent by bank',
+		'1004' => 'Chargeback',
+		'1005' => 'Company account closed',
+		'1006' => 'Site account closed',
+		'1009' => 'Fraud from webmaster',
+		'1018' => 'Undetermined reasons',
+		'1099' => 'Unknown reason',
+	);
+
+	const TABLE_NAME = 'payxpert_subscription';
+
+	/**
+	 * Fillable.
+	 *
+	 * @var list<string>
+	 */
+	protected $fillable = array(
+		'id_payxpert_subscription',
+		'customer_id',
+		'subscription_id',
+		'subscription_type',
+		'offer_id',
+		'transaction_id',
+		'amount',
+		'period',
+		'trial_amount',
+		'trial_period',
+		'state',
+		'subscription_start',
+		'period_start',
+		'period_end',
+		'cancel_date',
+		'cancel_reason',
+		'iterations',
+		'iterations_left',
+		'retries',
+		'date_upd',
+	);
+
+	/**
+	 * Primary key.
+	 *
+	 * @var string
+	 */
+	protected $primary_key = 'id_payxpert_subscription';
+
+	/**
+	 * Construct.
+	 */
+	public function __construct() {
+		global $wpdb;
+		$this->table = $wpdb->prefix . self::TABLE_NAME;
+	}
+
+	/**
+	 * Find a subscription by its subscription id.
+	 *
+	 * @param string $subscription_id Subscription id.
+	 * @return array<string, mixed>|null
+	 */
+	public static function find_by_subscription_id( string $subscription_id ): ?array {
+		return static::find_one_by( array( 'subscription_id' => $subscription_id ) );
+	}
+
+	/**
+	 * Returns paginated subscriptions with aggregated "sale" transaction counts.
+	 *
+	 * @param int                  $per_page Items per page.
+	 * @param int                  $offset   Pagination offset.
+	 * @param array<string, mixed> $filters  Optional filters (status, dates, customer).
+	 * @return array{items: list<object>, total_items: int, per_page: int}
+	 */
+	public static function get_all_with_transaction_counts( $per_page = 10, $offset = 0, $filters = array() ): array {
+		global $wpdb;
+
+		$subscription_table = $wpdb->prefix . self::TABLE_NAME;
+		$transaction_table  = $wpdb->prefix . 'payxpert_payment_transaction';
+		$users_table        = $wpdb->prefix . 'users';
+
+		// Collect WHERE clauses and their bound values so the whole statement is
+		// prepared once (building it with several $wpdb->prepare() calls and
+		// concatenating breaks as soon as a value contains a "%", e.g. LIKE filters).
+		$where_clauses = array( '1=1' );
+		$where_values  = array();
+
+		if ( ! empty( $filters['status'] ) ) {
+			$where_clauses[] = 's.state = %s';
+			$where_values[]  = $filters['status'];
+		}
+
+		if ( ! empty( $filters['date_from'] ) ) {
+			$where_clauses[] = 's.date_add >= %s';
+			$where_values[]  = $filters['date_from'];
+		}
+
+		if ( ! empty( $filters['date_to'] ) ) {
+			$where_clauses[] = 's.date_add <= %s';
+			$where_values[]  = $filters['date_to'];
+		}
+
+		if ( ! empty( $filters['customer'] ) ) {
+			$like            = '%' . $wpdb->esc_like( $filters['customer'] ) . '%';
+			$where_clauses[] = '(u.display_name LIKE %s OR u.user_email LIKE %s)';
+			$where_values[]  = $like;
+			$where_values[]  = $like;
+		}
+
+		$where = implode( ' AND ', $where_clauses );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Table names are safe internal identifiers built from $wpdb->prefix; every value is bound through $wpdb->prepare() via a single replacements array.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+            SELECT
+                s.*,
+                t.order_id,
+                u.display_name AS customer_name,
+                u.user_email AS customer_email,
+                (
+                    SELECT COUNT(*)
+                    FROM {$transaction_table} t2
+                    WHERE t2.subscription_id = s.subscription_id
+                    AND t2.operation = 'sale'
+                ) AS sale_transactions_count
+            FROM {$subscription_table} s
+            LEFT JOIN {$transaction_table} t
+                ON t.transaction_id = s.transaction_id
+            LEFT JOIN {$users_table} u
+                ON u.ID = s.customer_id
+            WHERE {$where}
+            ORDER BY s.period_start DESC
+            LIMIT %d OFFSET %d
+        ",
+				array_merge( $where_values, array( $per_page, $offset ) )
+			)
+		);
+
+		$count_sql = "
+            SELECT COUNT(*)
+            FROM {$subscription_table} s
+            LEFT JOIN {$users_table} u
+                ON u.ID = s.customer_id
+            WHERE {$where}
+        ";
+
+		$total = (int) ( empty( $where_values )
+			? $wpdb->get_var( $count_sql )
+			: $wpdb->get_var( $wpdb->prepare( $count_sql, $where_values ) ) );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		return array(
+			'items'       => $results,
+			'total_items' => $total,
+			'per_page'    => $per_page,
+			'offset'      => $offset,
+		);
+	}
+
+
+	/**
+	 * Get need synchronization.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public static function get_need_synchronization(): array {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE_NAME;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Static query on a safe internal table name; no user input.
+		$results = $wpdb->get_results(
+			"
+            SELECT transaction_id, id_payxpert_subscription, subscription_id
+            FROM {$table}
+            WHERE UNIX_TIMESTAMP(NOW()) > period_end
+            AND state = 'active'
+            AND period_end != 0
+            LIMIT 500
+            ",
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return $results ? $results : array();
+	}
+
+	/**
+	 * Count all.
+	 *
+	 * @return int
+	 */
+	public static function count_all(): int {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_NAME;
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Count on a safe internal table name; no user input.
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+	}
+
+	/**
+	 * Returns subscriptions for a given user.
+	 *
+	 * @param int $user_id User ID.
+	 * @param int $limit   Maximum number of rows to return.
+	 * @param int $offset  Query offset.
+	 * @return list<object>|false
+	 */
+	public static function get_user_subscriptions( $user_id, $limit = 10, $offset = 0 ) {
+		global $wpdb;
+
+		if ( ! $user_id ) {
+			return false;
+		}
+
+		$subscription_table = $wpdb->prefix . self::TABLE_NAME;
+		$transaction_table  = $wpdb->prefix . Payxpert_Payment_Transaction::TABLE_NAME;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are safe internal identifiers; values are bound through $wpdb->prepare().
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+                SELECT 
+                    s.*,
+                    t.order_id,
+                    t.card_brand,
+                    t.card_number,
+                    t.payment_method
+                FROM {$subscription_table} s
+                LEFT JOIN {$transaction_table} t
+                    ON t.transaction_id = s.transaction_id
+                WHERE s.customer_id = %d
+                ORDER BY 
+                    CASE 
+                        WHEN s.period_end = 0 OR s.period_end IS NULL THEN 1
+                        ELSE 0
+                    END,
+                    t.order_id DESC,
+                    s.period_end ASC,
+                    s.subscription_start DESC
+                LIMIT %d OFFSET %d
+            ",
+				$user_id,
+				$limit,
+				$offset
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return $results ? $results : false;
+	}
+
+	/**
+	 * Count user subscriptions.
+	 *
+	 * @param mixed $user_id User id.
+	 * @return mixed
+	 */
+	public static function count_user_subscriptions( $user_id ) {
+		global $wpdb;
+
+		if ( ! $user_id ) {
+			return 0;
+		}
+
+		$subscription_table = $wpdb->prefix . self::TABLE_NAME;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Safe internal table name; value bound through $wpdb->prepare().
+		return (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$subscription_table} WHERE customer_id = %d", $user_id )
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * Get subscription details.
+	 *
+	 * @param mixed $subscription_id Subscription id.
+	 * @return mixed
+	 */
+	public static function get_subscription_details( $subscription_id ) {
+		global $wpdb;
+
+		if ( ! $subscription_id ) {
+			return false;
+		}
+
+		$subscription_table = $wpdb->prefix . self::TABLE_NAME;
+		$transaction_table  = $wpdb->prefix . Payxpert_Payment_Transaction::TABLE_NAME;
+		$users_table        = $wpdb->prefix . 'users';
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are safe internal identifiers; values are bound through $wpdb->prepare().
+		$sub = $wpdb->get_row(
+			$wpdb->prepare(
+				"
+                SELECT 
+                    s.*,
+                    t.order_id,
+                    u.user_email,
+                    u.display_name
+                FROM {$subscription_table} s
+                LEFT JOIN {$transaction_table} t
+                    ON t.transaction_id = s.transaction_id
+                LEFT JOIN {$users_table} u
+                    ON u.ID = s.customer_id
+                WHERE s.subscription_id = %d
+                LIMIT 1
+                ",
+				$subscription_id
+			)
+		);
+
+		if ( ! $sub ) {
+			return false;
+		}
+
+		$sub->transactions = $wpdb->get_results(
+			$wpdb->prepare(
+				"
+                SELECT
+                    order_id,
+                    transaction_id,
+                    subscription_id,
+                    amount, 
+                    currency,
+                    result_code,
+                    result_message,
+                    date_add,
+                    card_brand,
+                    operation
+                FROM {$transaction_table} 
+                WHERE subscription_id = %d
+                ORDER BY date_add ASC
+                ",
+				(int) $subscription_id
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$sub->customer_email   = $sub->user_email;
+		$sub->customer_name    = $sub->display_name;
+		$sub->product_id       = null;
+		$sub->variation_id     = null;
+		$sub->product_name     = '';
+		$sub->product_quantity = 0;
+
+		if ( ! empty( $sub->order_id ) ) {
+
+			$order = wc_get_order( $sub->order_id );
+
+			if ( $order ) {
+				foreach ( $order->get_items() as $item ) {
+					if ( ! $item instanceof \WC_Order_Item_Product ) {
+						continue;
+					}
+					$product = $item->get_product();
+					if ( ! $product ) {
+						continue;
+					}
+
+					$sub->product_id       = $item->get_product_id();
+					$sub->variation_id     = $item->get_variation_id();
+					$sub->product_quantity = (int) $item->get_quantity();
+					$sub->product_name     = $product->get_name();
+
+					// Use the first line item only.
+					break;
+				}
+			}
+		}
+
+		return $sub;
+	}
+}

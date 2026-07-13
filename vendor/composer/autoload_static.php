@@ -9,17 +9,12 @@ class ComposerStaticInit551d09b76ade5931d2f8408088bb3772
     public static $prefixLengthsPsr4 = array (
         'P' => 
         array (
-            'Payxpert\\' => 9,
             'PayXpert\\Connect2Pay\\Tests\\' => 27,
             'PayXpert\\Connect2Pay\\' => 21,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Payxpert\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/src',
-        ),
         'PayXpert\\Connect2Pay\\Tests\\' => 
         array (
             0 => __DIR__ . '/..' . '/payxpert/connect2pay/tests',
@@ -32,6 +27,27 @@ class ComposerStaticInit551d09b76ade5931d2f8408088bb3772
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'Payxpert\\Exception\\ConfigurationNotFoundException' => __DIR__ . '/../..' . '/src/Exception/class-configurationnotfoundexception.php',
+        'Payxpert\\Exception\\CurlException' => __DIR__ . '/../..' . '/src/Exception/class-curlexception.php',
+        'Payxpert\\Exception\\HandleFailedException' => __DIR__ . '/../..' . '/src/Exception/class-handlefailedexception.php',
+        'Payxpert\\Exception\\HashFailedException' => __DIR__ . '/../..' . '/src/Exception/class-hashfailedexception.php',
+        'Payxpert\\Exception\\PaymentCancellationException' => __DIR__ . '/../..' . '/src/Exception/class-paymentcancellationexception.php',
+        'Payxpert\\Exception\\PaymentMethodNotFoundException' => __DIR__ . '/../..' . '/src/Exception/class-paymentmethodnotfoundexception.php',
+        'Payxpert\\Exception\\PaymentTokenExpiredException' => __DIR__ . '/../..' . '/src/Exception/class-paymenttokenexpiredexception.php',
+        'Payxpert\\Exception\\PaymentTokenNotFoundException' => __DIR__ . '/../..' . '/src/Exception/class-paymenttokennotfoundexception.php',
+        'Payxpert\\Exception\\PaymentTokenNotUpdatedException' => __DIR__ . '/../..' . '/src/Exception/class-paymenttokennotupdatedexception.php',
+        'Payxpert\\Exception\\PayxpertException' => __DIR__ . '/../..' . '/src/Exception/class-payxpertexception.php',
+        'Payxpert\\Models\\Payxpert_Abstract_Model' => __DIR__ . '/../..' . '/src/Models/class-payxpert-abstract-model.php',
+        'Payxpert\\Models\\Payxpert_Cron_Log' => __DIR__ . '/../..' . '/src/Models/class-payxpert-cron-log.php',
+        'Payxpert\\Models\\Payxpert_Payment_Token' => __DIR__ . '/../..' . '/src/Models/class-payxpert-payment-token.php',
+        'Payxpert\\Models\\Payxpert_Payment_Transaction' => __DIR__ . '/../..' . '/src/Models/class-payxpert-payment-transaction.php',
+        'Payxpert\\Models\\Payxpert_Subscription' => __DIR__ . '/../..' . '/src/Models/class-payxpert-subscription.php',
+        'Payxpert\\Utils\\WC_Payxpert_Admin_Notices' => __DIR__ . '/../..' . '/src/Utils/class-wc-payxpert-admin-notices.php',
+        'Payxpert\\Utils\\WC_Payxpert_Cron' => __DIR__ . '/../..' . '/src/Utils/class-wc-payxpert-cron.php',
+        'Payxpert\\Utils\\WC_Payxpert_Install' => __DIR__ . '/../..' . '/src/Utils/class-wc-payxpert-install.php',
+        'Payxpert\\Utils\\WC_Payxpert_Logger' => __DIR__ . '/../..' . '/src/Utils/class-wc-payxpert-logger.php',
+        'Payxpert\\Utils\\WC_Payxpert_Utils' => __DIR__ . '/../..' . '/src/Utils/class-wc-payxpert-utils.php',
+        'Payxpert\\Utils\\WC_Payxpert_Webservice' => __DIR__ . '/../..' . '/src/Utils/class-wc-payxpert-webservice.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

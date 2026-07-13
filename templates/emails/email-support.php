@@ -1,9 +1,32 @@
 <?php
+/**
+ * Email Support.
+ *
+ * @package Payxpert
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-do_action( 'woocommerce_email_header', $email->get_heading(), $email );
+/**
+ * Email template variables for the support request message.
+ *
+ * @var \WC_Email_Payxpert_Support $email
+ * @var string                     $shop_name
+ * @var string                     $mid
+ * @var string                     $lastname
+ * @var string                     $firstname
+ * @var string                     $email_customer
+ * @var string                     $subject
+ * @var string                     $cms_version
+ * @var string                     $wooc_version
+ * @var string                     $php_version
+ * @var string                     $module_version
+ */
+
+// WooCommerce core email header hook (documented in WooCommerce core templates).
+do_action( 'woocommerce_email_header', $email->get_heading(), $email ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound, WooCommerce.Commenting.CommentHooks -- WooCommerce core hook, not owned by this plugin.
 ?>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -33,5 +56,6 @@ do_action( 'woocommerce_email_header', $email->get_heading(), $email );
 </table>
 
 <?php
-do_action( 'woocommerce_email_footer', $email );
+// WooCommerce core email footer hook (documented in WooCommerce core templates).
+do_action( 'woocommerce_email_footer', $email ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound, WooCommerce.Commenting.CommentHooks -- WooCommerce core hook, not owned by this plugin.
 ?>
